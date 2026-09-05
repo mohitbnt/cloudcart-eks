@@ -1,0 +1,9 @@
+region      = "us-east-1"
+project     = "cloudcart-eks"
+bucket_name = "repo-1358538824-tfstate"
+
+# Github repo path for OIDC, syntax- "username@owner_id/repository@repo_id"
+github_repo_path = "mohitbnt@157871158/cloudcart-eks@1358538824"
+github_branch    = "refs/heads/main"
+
+github_oidc_role = "github-actions-oidc-eks-role"
