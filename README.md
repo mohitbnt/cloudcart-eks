@@ -34,9 +34,12 @@ to build and operate a realistic production-oriented infrastructure stack.
 ## Repository Structure
 
 ```text
-cloudcart-eks/
-├── terraform/       # AWS infrastructure
-├── kubernetes/      # Kubernetes manifests and overlays
-├── application/     # Application-related configuration
-├── diagrams/        # Architecture diagrams
-└── README.md
+cloudcart-eks
+├── .git
+├── .gitignore
+├── README.md
+├── application     # Application-related configuration
+├── bootstrap       # Bootstrap infrastructure
+├── diagrams        # Architecture diagrams
+├── kubernetes      # Kubernetes manifests and overlays
+└── terraform       # AWS infrastructure
