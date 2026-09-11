@@ -33,17 +33,17 @@ variable "region" {
 
 variable "db_instance_config" {
   type = object({
-    allocated_storage     = number
-    family                = string
-    engine                = string
-    engine_version        = string
-    instance_class        = string
-    db_name               = string
-    username              = string
-    multi_az              = bool
-    backup_retention      = number
-    deletion_protection   = bool
-    skip_final_snapshot   = bool
+    allocated_storage   = number
+    family              = string
+    engine              = string
+    engine_version      = string
+    instance_class      = string
+    db_name             = string
+    username            = string
+    multi_az            = bool
+    backup_retention    = number
+    deletion_protection = bool
+    skip_final_snapshot = bool
   })
 
   description = "Configuration for the Amazon RDS PostgreSQL database instance."

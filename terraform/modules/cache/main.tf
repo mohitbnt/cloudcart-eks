@@ -66,21 +66,25 @@ resource "aws_elasticache_replication_group" "redis_cluster" {
     }
   )
 }
-
 # --------------------------------------------------------------------------------
-# 5. Create parameter group for Redis Elasticache URL
+# 4. Create a secret to store the Redis Elasticache URL in Secrets Manager.
 # --------------------------------------------------------------------------------
-resource "aws_ssm_parameter" "redis_url" {
-  name        = "/${var.project_name}/${var.environment}/config/REDIS_URL"
-  description = "Connection URL for the ${var.project_name} Redis Elasticache Cluster in ${var.environment}."
-  type        = "String"
-
-  value = "redis://${aws_elasticache_replication_group.redis_cluster.primary_endpoint_address}:6379/0"
-
+resource "aws_secretsmanager_secret" "redis_url" {
+  name                    = "${var.project_name}/${var.environment}/redis-url"
+  description             = "Redis URL for ${var.project_name} in ${var.environment}."
+  recovery_window_in_days = 0
   tags = merge(
     var.common_tags,
     {
       Name = "${var.project_name}-${var.environment}-redis-url"
     }
   )
+}
+
+# --------------------------------------------------------------------------------
+# 5. Create a secret version to store the Redis Elasticache URL in Secrets Manager.
+# --------------------------------------------------------------------------------
+resource "aws_secretsmanager_secret_version" "redis_url" {
+  secret_id     = aws_secretsmanager_secret.redis_url.id
+  secret_string = "redis://${aws_elasticache_replication_group.redis_cluster.primary_endpoint_address}:6379/0"
 }

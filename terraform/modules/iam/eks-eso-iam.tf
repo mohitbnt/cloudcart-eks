@@ -21,7 +21,7 @@ resource "aws_iam_role" "eso_role" {
 }
 
 # -----------------------------------------------------------------------------
-# 3. Create Policy Document for Secrets Manager & Parameter Store
+# 3. Create Policy Document for Secrets Manager
 # -----------------------------------------------------------------------------
 data "aws_iam_policy_document" "eso_secrets_policy_document" {
   statement {
@@ -37,20 +37,6 @@ data "aws_iam_policy_document" "eso_secrets_policy_document" {
       "arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}/*"
     ]
   }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-      "ssm:GetParametersByPath",
-    ]
-
-    resources = [
-      "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/*"
-    ]
-  }
 }
 
 # -----------------------------------------------------------------------------
@@ -58,7 +44,7 @@ data "aws_iam_policy_document" "eso_secrets_policy_document" {
 # -----------------------------------------------------------------------------
 resource "aws_iam_policy" "eso_secrets_policy" {
   name        = "${var.project_name}-external-secrets-policy"
-  description = "Policy for External Secrets Operator to access Secrets Manager and Parameter Store"
+  description = "Policy for External Secrets Operator to access Secrets Manager"
   policy      = data.aws_iam_policy_document.eso_secrets_policy_document.json
 }
 

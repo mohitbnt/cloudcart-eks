@@ -98,8 +98,8 @@ resource "aws_eks_pod_identity_association" "eso_pod_identity" {
   service_account = "external-secrets"
   role_arn        = var.eso_role_arn
 
-  depends_on = [ 
+  depends_on = [
     aws_eks_cluster.main_eks_cluster,
     aws_eks_addon.pod_identity_agent
-   ]
+  ]
 }
