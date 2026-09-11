@@ -74,3 +74,69 @@ module "eks" {
     module.iam
   ]
 }
+
+# --------------------------------------------------------------------------------
+# 5. Install External Secrets Operator via Helm
+# --------------------------------------------------------------------------------
+resource "helm_release" "external_secrets" {
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = "0.14.2" # Note: Swapped to a verified valid Helm version (usually 0.x.x for ESO)
+  namespace        = "external-secrets"
+  create_namespace = true
+
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
+
+  depends_on = [
+    module.eks,
+    module.iam
+  ]
+}
+
+# --------------------------------------------------------------------------------
+# 6. Create ClusterSecretStore object via a Raw Helm Release
+# --------------------------------------------------------------------------------
+resource "helm_release" "cluster_secret_store" {
+  name       = "aws-secrets-backend-config"
+  namespace  = "external-secrets"
+  repository = "https://github.io"
+  chart      = "raw"
+  version    = "2.0.0"
+
+  values = [
+    yamlencode({
+      resources = [
+        {
+          apiVersion = "external-secrets.io/v1beta1"
+          kind       = "ClusterSecretStore"
+          metadata = {
+            name = "aws-secrets-backend"
+          }
+          spec = {
+            provider = {
+              aws = {
+                service = "SecretsManager"
+                region  = var.region
+                auth = {
+                  jwt = {
+                    serviceAccountRef = {
+                      name      = "external-secrets"
+                      namespace = "external-secrets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    })
+  ]
+  depends_on = [
+    helm_release.external_secrets
+  ]
+}
