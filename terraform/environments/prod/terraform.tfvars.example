@@ -1,0 +1,108 @@
+# AWS region where the production infrastructure will be deployed.
+# Type: string
+# Example: "us-east-1"
+region = "us-east-1"
+
+# Name used to identify and tag all CloudCart resources.
+# Type: string
+# Example: "cloudcart"
+project_name = "cloudcart"
+
+# Environment name.
+# Type: string
+# Example: "prod"
+environment = "prod"
+
+
+# ============================================================
+# Amazon RDS PostgreSQL
+# ============================================================
+
+db_instance_config = {
+
+  # Amount of storage allocated to the RDS instance in GiB.
+  # Type: number
+  # Set this according to expected production database capacity.
+  allocated_storage = 50
+
+  # RDS PostgreSQL parameter group family.
+  # Type: string
+  # Must match the selected PostgreSQL major version.
+  # Example: "postgres17"
+  family = "postgres17"
+
+  # Database engine.
+  # Type: string
+  # Example: "postgres"
+  engine = "postgres"
+
+  # PostgreSQL engine version.
+  # Type: string
+  # Example: "17.7"
+  engine_version = "17.7"
+
+  # RDS instance class.
+  # Type: string
+  # Choose an instance size based on production workload requirements.
+  # Example: "db.t3.small"
+  instance_class = "db.t3.small"
+
+  # Initial database name created by RDS.
+  # Type: string
+  # Use a valid PostgreSQL database name.
+  db_name = "cloudcart"
+
+  # Master database username.
+  # Type: string
+  # Use a non-empty username suitable for the application.
+  username = "cloudcart"
+
+  # Whether the RDS instance should run in Multi-AZ configuration.
+  # Type: bool
+  # Production: normally true for high availability.
+  multi_az = true
+
+  # Number of days automated backups should be retained.
+  # Type: number
+  # Production should normally use a longer retention period.
+  backup_retention = 7
+
+  # Prevent accidental deletion of the RDS instance.
+  # Type: bool
+  # Production: true is recommended.
+  deletion_protection = true
+
+  # Whether to skip the final snapshot when destroying the RDS instance.
+  # Type: bool
+  # Production: false ensures a final snapshot is taken before deletion.
+  skip_final_snapshot = false
+}
+
+
+# ============================================================
+# Amazon ElastiCache Redis
+# ============================================================
+
+cache_config = {
+
+  # Redis engine version.
+  # Type: string
+  # Example: "7.1"
+  engine_version = "7.1"
+
+  # ElastiCache node type.
+  # Type: string
+  # Choose a node size based on production workload requirements.
+  # Example: "cache.t4g.micro"
+  node_type = "cache.t4g.micro"
+
+  # Enable automatic failover for Redis.
+  # Type: bool
+  # Set to true when Redis is configured with replicas and automatic failover.
+  automatic_failover_enabled = false
+
+  # Enable Multi-AZ for Redis.
+  # Type: bool
+  # Set to true when the production Redis architecture requires Multi-AZ.
+  multi_az_enabled = false
+}

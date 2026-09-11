@@ -1,0 +1,100 @@
+# AWS region where the core infrastructure will be deployed.
+# Type: string
+# Example: "us-east-1"
+region = "us-east-1"
+
+# Name used to identify and tag CloudCart infrastructure resources.
+# Type: string
+# Example: "cloudcart"
+project_name = "cloudcart"
+
+
+# ============================================================
+# VPC / Networking
+# ============================================================
+
+# CIDR block for the VPC.
+# Type: string
+# Example: "10.0.0.0/16"
+vpc_cidr = "10.0.0.0/16"
+
+# CIDR blocks for public subnets.
+# Type: list(string)
+# Provide one CIDR block for each public subnet/AZ.
+# Example: ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs = [
+  "10.0.1.0/24",
+  "10.0.2.0/24"
+]
+
+# CIDR blocks for private subnets.
+# Type: list(string)
+# Provide one CIDR block for each private subnet/AZ.
+# Example: ["10.0.21.0/24", "10.0.22.0/24"]
+private_subnet_cidrs = [
+  "10.0.21.0/24",
+  "10.0.22.0/24"
+]
+
+
+# ============================================================
+# Amazon EKS
+# ============================================================
+
+# Kubernetes version for the EKS cluster.
+# Type: string
+# Example: "1.36"
+kubernetes_version = "1.36"
+
+# CIDR blocks allowed to access the public EKS Kubernetes API endpoint.
+# Type: list(string)
+# Use trusted administrator/public IP addresses in CIDR notation.
+# For a single public IP, use /32.
+# Example: ["203.0.113.10/32"]
+#
+# IMPORTANT:
+# Replace this example value with the public IP/network that should
+# be allowed to access the EKS API.
+public_access_cidr = [
+  "203.0.113.10/32"
+]
+
+
+# ============================================================
+# EKS Managed Node Group
+# ============================================================
+
+# Minimum number of worker nodes.
+# Type: number
+# Example: 2
+min_size = 2
+
+# Maximum number of worker nodes.
+# Type: number
+# Example: 3
+max_size = 3
+
+# Desired number of worker nodes.
+# Type: number
+# Example: 2
+desired_size = 2
+
+# EC2 instance types available to the EKS node group.
+# Type: list(string)
+# Provide one or more compatible EC2 instance types.
+# Example: ["t3.medium"]
+instance_types = [
+  "t3.medium"
+]
+
+# Root EBS volume size for each EKS worker node in GiB.
+# Type: number
+# Example: 20
+disk_size = 20
+
+# Capacity type for the EKS managed node group.
+# Type: string
+# Supported values in this project: "ON_DEMAND" or "SPOT".
+#
+# SPOT reduces cost but instances can be interrupted by AWS.
+capacity_type = "SPOT"
