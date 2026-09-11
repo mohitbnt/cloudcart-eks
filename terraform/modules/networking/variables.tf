@@ -56,6 +56,12 @@ variable "private_subnet_cidrs" {
   }
 }
 
+variable "enable_nat_gateway" {
+  type        = bool
+  default     = false
+  description = "Controls if a temporary NAT Gateway is provisioned. Keep false for private isolation; set true during initial setup/bootstrapping."
+}
+
 variable "vpc_endpoint_sg_id" {
   type        = string
   description = "Security group ID used by the VPC interface endpoints."

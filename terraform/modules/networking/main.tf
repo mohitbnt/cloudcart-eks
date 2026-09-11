@@ -141,3 +141,49 @@ resource "aws_vpc_endpoint" "interface_vpc_endpoint" {
     Name = "${var.project_name}-${each.key}-vpc-endpoint"
   })
 }
+
+# --------------------------------------------------------------------------------
+#                   Optional: NAT Gateway for bootstrapping
+# --------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
+# 12. Elastic IP for NAT Gateway (Created only if enable_nat_gateway = true)
+# --------------------------------------------------------------------------------
+
+resource "aws_eip" "nat_gw_eip" {
+  count  = var.enable_nat_gateway ? 1 : 0
+  domain = "vpc"
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-nat-gw-eip"
+  })
+}
+
+# --------------------------------------------------------------------------------
+# 13. NAT Gateway (Created only if enable_nat_gateway = true)
+# --------------------------------------------------------------------------------
+
+resource "aws_nat_gateway" "nat_gw" {
+  count         = var.enable_nat_gateway ? 1 : 0
+  allocation_id = aws_eip.nat_gw_eip[0].id
+  subnet_id     = aws_subnet.public_subnets[0].id
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-nat-gw"
+  })
+
+  depends_on = [
+    aws_internet_gateway.main_igw
+  ]
+}
+
+# --------------------------------------------------------------------------------
+# 14. Route to NAT Gateway for Private Route Table
+# --------------------------------------------------------------------------------
+
+resource "aws_route" "private_nat_gateway" {
+  count                  = var.enable_nat_gateway ? 1 : 0
+  route_table_id         = aws_route_table.private_route_table.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat_gw[0].id
+}

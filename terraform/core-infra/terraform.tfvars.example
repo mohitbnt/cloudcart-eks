@@ -36,6 +36,11 @@ private_subnet_cidrs = [
   "10.0.22.0/24"
 ]
 
+# Controls if a temporary NAT Gateway is provisioned.
+# Type: bool
+# Default: false
+# Example: true
+enable_nat_gateway = true
 
 # ============================================================
 # Amazon EKS
