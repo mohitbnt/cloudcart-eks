@@ -98,7 +98,7 @@ resource "helm_release" "external_secrets" {
 }
 
 # --------------------------------------------------------------------------------
-# 6. Create ClusterSecretStore object via a Raw Helm Release
+# 6. Create ClusterSecretStore object via a Raw Helm Release for AWS Secrets Manager
 # --------------------------------------------------------------------------------
 resource "helm_release" "cluster_secret_store" {
   name       = "aws-secrets-backend-config"
@@ -120,6 +120,50 @@ resource "helm_release" "cluster_secret_store" {
             provider = {
               aws = {
                 service = "SecretsManager"
+                region  = var.region
+                auth = {
+                  jwt = {
+                    serviceAccountRef = {
+                      name      = "external-secrets"
+                      namespace = "external-secrets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    })
+  ]
+  depends_on = [
+    helm_release.external_secrets
+  ]
+}
+
+# --------------------------------------------------------------------------------
+# 7. Create ClusterSecretStore object via a Raw Helm Release for AWS Parameter Store
+# --------------------------------------------------------------------------------
+resource "helm_release" "cluster_parameter_store" {
+  name       = "aws-parameters-backend-config"
+  namespace  = "external-secrets"
+  repository = "https://github.io"
+  chart      = "raw"
+  version    = "2.0.0"
+
+  values = [
+    yamlencode({
+      resources = [
+        {
+          apiVersion = "external-secrets.io/v1beta1"
+          kind       = "ClusterSecretStore"
+          metadata = {
+            name = "aws-parameters-backend"
+          }
+          spec = {
+            provider = {
+              aws = {
+                service = "ParameterStore"
                 region  = var.region
                 auth = {
                   jwt = {
