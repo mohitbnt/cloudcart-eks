@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cloudcart-prod
+
+resources:
+  - ../../base
+
+patches:
+  - path: namespace-patch.yaml
+
+images:
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-catalog
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-identity
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-cart
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-inventory
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-order
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-payment
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-notification
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-gateway
+    newTag: prod1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-frontend
+    newTag: prod1.0.0

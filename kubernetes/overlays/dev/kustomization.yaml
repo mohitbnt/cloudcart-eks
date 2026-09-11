@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cloudcart-dev
+
+resources:
+  - ../../base
+
+patches:
+  - path: namespace-patch.yaml
+  - path: configmap-patch.yaml
+  - path: postgresql-secret-patch.yaml
+  - path: redis-secret-patch.yaml
+  
+  - target:
+      group: networking.k8s.io
+      version: v1
+      kind: Ingress
+      name: cloudcart-ingress
+    path: ingress-patch.yaml
+
+images:
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-catalog
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-identity
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-cart
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-inventory
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-order
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-payment
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-notification
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-gateway
+    newTag: dev1.0.0
+
+  - name: 533317135122.dkr.ecr.us-east-1.amazonaws.com/cloudcart-frontend
+    newTag: dev1.0.0
