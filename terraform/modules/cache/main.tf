@@ -85,6 +85,8 @@ resource "aws_secretsmanager_secret" "redis_url" {
 # 5. Create a secret version to store the Redis Elasticache URL in Secrets Manager.
 # --------------------------------------------------------------------------------
 resource "aws_secretsmanager_secret_version" "redis_url" {
-  secret_id     = aws_secretsmanager_secret.redis_url.id
-  secret_string = "redis://${aws_elasticache_replication_group.redis_cluster.primary_endpoint_address}:6379/0"
+  secret_id = aws_secretsmanager_secret.redis_url.id
+  secret_string = jsonencode({
+    REDIS_URL = "redis://${aws_elasticache_replication_group.redis_cluster.primary_endpoint_address}:6379/0"
+  })
 }

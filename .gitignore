@@ -17,12 +17,6 @@ terraform.tfvars
 terraform.tfvars.json
 
 # Kubernetes
-*.secret.yaml
-*.secret.yml
-secret.yaml
-secret.yml
-secret*.yaml
-secret*.yml
 
 # Environment files
 .env
