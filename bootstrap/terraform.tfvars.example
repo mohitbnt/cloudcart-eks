@@ -7,3 +7,7 @@ github_repo_path = "mohitbnt@157871158/cloudcart-eks@1358538824"
 github_branch    = "refs/heads/main"
 
 github_oidc_role = "github-actions-oidc-eks-role"
+
+cloudflare_api_token = ""
+cloudflare_zone_id   = ""
+domain_name          = ""
