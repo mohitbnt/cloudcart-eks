@@ -85,7 +85,8 @@ resource "aws_eks_addon" "ebs_csi" {
   depends_on = [
     aws_eks_cluster.main_eks_cluster,
     aws_eks_node_group.main_eks_node_group,
-    aws_eks_pod_identity_association.ebs_csi_association
+    aws_eks_pod_identity_association.ebs_csi_association,
+    aws_eks_addon.coredns
   ]
 }
 

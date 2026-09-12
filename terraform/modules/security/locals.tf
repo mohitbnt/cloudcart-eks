@@ -102,6 +102,15 @@ locals {
       cidr_block                   = null
       referenced_security_group_id = aws_security_group.eks_cluster_sg.id
     }
+    node_to_node = {
+      description                  = "Nodes to nodes"
+      from_port                    = null
+      to_port                      = null
+      ip_protocol                  = "-1"
+      use_cidr                     = false
+      cidr_block                   = null
+      referenced_security_group_id = aws_security_group.eks_worker_sg.id
+    }
   }
 
   worker_sg_egress = {

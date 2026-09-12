@@ -6,6 +6,7 @@ resources:
   - namespace/namespace.yaml
 
   # Configuration
+  - config/cluster-secret-store.yaml
   - config/configmap-app.yaml
   - config/postgresql-secret.yaml
   - config/redis-secret.yaml
