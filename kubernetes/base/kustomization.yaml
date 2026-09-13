@@ -6,7 +6,6 @@ resources:
   - namespace/namespace.yaml
 
   # Configuration
-  - config/cluster-secret-store.yaml
   - config/configmap-app.yaml
   - config/postgresql-secret.yaml
   - config/redis-secret.yaml
@@ -43,19 +42,7 @@ resources:
   - ingress/ingress.yaml
 
   # Network Policies
-  - policies/01-default-deny.yaml
-  - policies/02-allow-dns.yaml
-  - policies/03-postgresql.yaml
-  - policies/04-redis.yaml
-  - policies/05-frontend.yaml
-  - policies/06-gateway.yaml
-  - policies/07-catalog.yaml
-  - policies/08-identity.yaml
-  - policies/09-cart.yaml
-  - policies/10-inventory.yaml
-  - policies/11-order.yaml
-  - policies/12-payment.yaml
-  - policies/13-notification.yaml
+
 
   # Autoscaling
   - autoscaling/01-gateway-hpa.yaml
