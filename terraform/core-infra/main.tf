@@ -134,6 +134,11 @@ resource "helm_release" "aws_load_balancer_controller" {
       region      = var.region
       vpcId       = module.networking.vpc_id
 
+      # Disable features requiring public AWS endpoints not supported by VPC Endpoints
+      enableShield = false
+      enableWaf    = false
+      enableWafv2  = false
+
       # Configure the ServiceAccount to match your Pod Identity association
       serviceAccount = {
         create      = true

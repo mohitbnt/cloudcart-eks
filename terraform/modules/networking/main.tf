@@ -24,6 +24,7 @@ resource "aws_subnet" "public_subnets" {
   tags = merge(var.common_tags, {
     Name                     = "${var.project_name}-public-subnet-${count.index}"
     "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/cluster/${var.project_name}-eks-cluster" = "shared"
   })
 }
 
