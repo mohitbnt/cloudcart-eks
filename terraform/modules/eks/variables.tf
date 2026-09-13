@@ -107,7 +107,19 @@ variable "ebs_csi_role_arn" {
   description = "ARN of the EBS CSI role."
 }
 
+# --------------------------------------------------------------------------------
+# 4. ESO Variables
+# --------------------------------------------------------------------------------
 variable "eso_role_arn" {
   type        = string
   description = "ARN of the External Secrets Operator role."
+}
+
+# --------------------------------------------------------------------------------
+# 5. LB Controller Variables
+# --------------------------------------------------------------------------------
+
+variable "lb_controller_role_arn" {
+  type        = string
+  description = "ARN of the AWS Load Balancer Controller role."
 }

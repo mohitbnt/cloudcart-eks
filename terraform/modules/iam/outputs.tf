@@ -29,3 +29,11 @@ output "eso_role_arn" {
   value       = aws_iam_role.eso_role.arn
   description = "ARN of the External Secrets Operator role."
 }
+
+# --------------------------------------------------------------------------------
+# 5. Publish LB Controller Role ARN
+# --------------------------------------------------------------------------------
+output "lb_controller_role_arn" {
+  value       = aws_iam_role.lb_controller_role.arn
+  description = "ARN of the AWS Load Balancer Controller role."
+}

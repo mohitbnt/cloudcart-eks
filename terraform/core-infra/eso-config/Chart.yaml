@@ -1,0 +1,6 @@
+apiVersion: v2
+name: eso-config
+description: Deploys ClusterSecretStore for External Secrets Operator
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

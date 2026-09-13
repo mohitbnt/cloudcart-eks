@@ -93,7 +93,7 @@ locals {
       cidr_block                   = null
       referenced_security_group_id = aws_security_group.eks_cluster_sg.id
     }
-    cp_to_nodes = {
+    cp_to_nodes1 = {
       description                  = "Control plane to nodes port 10250"
       from_port                    = 10250
       to_port                      = 10250
@@ -110,6 +110,15 @@ locals {
       use_cidr                     = false
       cidr_block                   = null
       referenced_security_group_id = aws_security_group.eks_worker_sg.id
+    }
+    cp_to_nodes2 = {
+      description                  = "Control plane to nodes port 9443"
+      from_port                    = 9443
+      to_port                      = 9443
+      ip_protocol                  = "tcp"
+      use_cidr                     = false
+      cidr_block                   = null
+      referenced_security_group_id = aws_security_group.eks_cluster_sg.id
     }
   }
 

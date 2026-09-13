@@ -1,27 +1,13 @@
 # -----------------------------------------------------------------------------
-# 1. Assume role policy document for EKS Pod Identity
-# -----------------------------------------------------------------------------
-data "aws_iam_policy_document" "eso_assume_role_document" {
-  statement {
-    actions = ["sts:AssumeRole", "sts:TagSession"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["pods.eks.amazonaws.com"]
-    }
-  }
-}
-
-# -----------------------------------------------------------------------------
-# 2. Create IAM Role for External Secrets Operator
+# 1. Create IAM Role for External Secrets Operator
 # -----------------------------------------------------------------------------
 resource "aws_iam_role" "eso_role" {
   name               = "${var.project_name}-external-secrets-role"
-  assume_role_policy = data.aws_iam_policy_document.eso_assume_role_document.json
+  assume_role_policy = data.aws_iam_policy_document.pods_assume_role_document.json
 }
 
 # -----------------------------------------------------------------------------
-# 3. Create Policy Document for Secrets Manager
+# 2. Create Policy Document for Secrets Manager
 # -----------------------------------------------------------------------------
 data "aws_iam_policy_document" "eso_secrets_policy_document" {
   statement {
@@ -40,7 +26,7 @@ data "aws_iam_policy_document" "eso_secrets_policy_document" {
 }
 
 # -----------------------------------------------------------------------------
-# 4. Create IAM Policy
+# 3. Create IAM Policy
 # -----------------------------------------------------------------------------
 resource "aws_iam_policy" "eso_secrets_policy" {
   name        = "${var.project_name}-external-secrets-policy"
@@ -49,7 +35,7 @@ resource "aws_iam_policy" "eso_secrets_policy" {
 }
 
 # -----------------------------------------------------------------------------
-# 5. Attach Policy to IAM Role
+# 4. Attach Policy to IAM Role
 # -----------------------------------------------------------------------------
 resource "aws_iam_role_policy_attachment" "eso_secrets_policy_attachment" {
   role       = aws_iam_role.eso_role.name

@@ -104,3 +104,29 @@ resource "aws_eks_pod_identity_association" "eso_pod_identity" {
     aws_eks_addon.pod_identity_agent
   ]
 }
+
+# --------------------------------------------------------------------------------
+# 7. Create EKS Pod Identity Association for LB Controller
+# --------------------------------------------------------------------------------
+resource "aws_eks_pod_identity_association" "lb_controller_pod_identity" {
+  cluster_name = aws_eks_cluster.main_eks_cluster.name
+  namespace    = "kube-system"
+  service_account = "aws-load-balancer-controller"
+  role_arn     = var.lb_controller_role_arn
+}
+
+# --------------------------------------------------------------------------------
+# 8. Add Metrics Server Addon
+# --------------------------------------------------------------------------------
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name = aws_eks_cluster.main_eks_cluster.name
+  addon_name   = "metrics-server"
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [
+    aws_eks_cluster.main_eks_cluster,
+    aws_eks_node_group.main_eks_node_group
+  ]
+}
