@@ -7,11 +7,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket       = "repo-1358538824-tfstate"
-    key          = "cloudcart-eks/environments/prod/terraform.tfstate"
-    region       = "us-east-1"
-    use_lockfile = true
-    encrypt      = true
+    # Use the prod-backend.conf file to configure the backend
   }
 }
 

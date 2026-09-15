@@ -11,11 +11,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket       = "repo-1358538824-tfstate"
-    key          = "cloudcart-eks/core-infra/terraform.tfstate"
-    region       = "us-east-1"
-    use_lockfile = true
-    encrypt      = true
+    # Use the core-infra-backend.conf file to configure the backend
   }
 }
 
