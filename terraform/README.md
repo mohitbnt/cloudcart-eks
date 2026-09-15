@@ -1,195 +1,280 @@
 # CloudCart – AWS Infrastructure (Terraform)
 
-Terraform configuration that provisions the AWS infrastructure for **CloudCart**: a private-by-default Amazon EKS cluster, an RDS PostgreSQL database, and an ElastiCache Redis cluster, with secrets delivered into Kubernetes via the External Secrets Operator (ESO).
+Terraform configuration for provisioning the AWS infrastructure for **CloudCart** using reusable modules and separate Terraform states for shared infrastructure and environment-specific data services.
 
 ![Architecture diagram](diagrams/architecture.png)
 
-## Contents
+## Architecture Overview
 
-- [CloudCart – AWS Infrastructure (Terraform)](#cloudcart--aws-infrastructure-terraform)
-  - [Contents](#contents)
-  - [Architecture overview](#architecture-overview)
-  - [Repository layout](#repository-layout)
-  - [Design decisions worth knowing](#design-decisions-worth-knowing)
-  - [Prerequisites](#prerequisites)
-  - [Backend \& state](#backend--state)
-  - [Usage](#usage)
-  - [Module reference](#module-reference)
-  - [Variables](#variables)
-    - [`core-infra`](#core-infra)
-    - [`environments/dev` and `environments/prod`](#environmentsdev-and-environmentsprod)
-  - [Outputs](#outputs)
-  - [Security notes](#security-notes)
-  - [Cost notes](#cost-notes)
+- **VPC** with configurable public and private subnets across the configured Availability Zones.
+- **Optional NAT Gateway** controlled by `enable_nat_gateway`. It is disabled by default and can be temporarily enabled for bootstrapping or workloads that require internet egress.
+- **VPC Endpoints** provide private access to AWS services such as EKS, ECR, STS, SSM, Secrets Manager, CloudWatch Logs, ELB and Auto Scaling. S3 uses a Gateway endpoint.
+- **Amazon EKS** runs worker nodes in private subnets using an EKS managed node group with a configurable `SPOT` or `ON_DEMAND` capacity type.
+- **EKS managed add-ons** include VPC CNI, CoreDNS, kube-proxy, EKS Pod Identity Agent, AWS EBS CSI Driver and Metrics Server.
+- **AWS Load Balancer Controller** is installed through Helm and uses EKS Pod Identity for AWS access.
+- **External Secrets Operator (ESO)** is installed through Helm. A custom Helm chart creates the AWS `ClusterSecretStore` configuration.
+- **Amazon RDS PostgreSQL** and **Amazon ElastiCache Redis** are deployed separately for each environment.
+- **Secrets Manager** stores database credentials and the Redis connection URL. ESO accesses Secrets Manager using a scoped IAM role through EKS Pod Identity.
 
-## Architecture overview
+## Repository Layout
 
-- **VPC** spanning 2 Availability Zones, each with one public and one private subnet.
-- **No NAT Gateway.** Private subnets reach AWS services only through VPC endpoints (S3 gateway endpoint + interface endpoints for EKS, ECR, STS, SSM, Secrets Manager, CloudWatch Logs, ELB, Auto Scaling, etc.). Worker nodes have no route to the public internet.
-- **Amazon EKS** cluster with both private and public API access; public access is restricted to an IP allow-list (`public_access_cidr`). A single managed node group (SPOT by default) runs in the private subnets.
-- **EKS add-ons**: `vpc-cni`, `coredns`, `kube-proxy`, `eks-pod-identity-agent`, `aws-ebs-csi-driver`. The EBS CSI driver and External Secrets Operator authenticate to AWS using **EKS Pod Identity** (no IRSA/OIDC federation needed).
-- **Amazon RDS (PostgreSQL)** and **Amazon ElastiCache (Redis)**, deployed per-environment, reachable only from the EKS worker security group.
-- **Secrets**: RDS credentials + connection string are written to **Secrets Manager**; the Redis endpoint is written to **SSM Parameter Store**. The ESO IAM role (Pod Identity) can read both, scoped to the `<project_name>/*` and `/<project_name>/*` paths, so an External Secrets Operator deployment in the `external-secrets` namespace can sync them into Kubernetes `Secret` objects without any credentials living in Terraform state consumers or CI variables.
-- **Two-layer Terraform design**: a shared `core-infra` layer (network/security/IAM/EKS) and thin per-environment layers (`dev`, `prod`) for the data services, connected via `terraform_remote_state`.
-
-## Repository layout
-
-```
+```text
 terraform/
-├── core-infra/                # Layer 1 – shared platform (deploy once)
-│   ├── main.tf                 # wires networking, security, iam, eks modules
-│   ├── variables.tf / locals.tf / providers.tf / outputs.tf
+├── core-infra/                # Shared infrastructure and EKS platform
+│   ├── eso-config/            # Helm chart for ESO ClusterSecretStore
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── locals.tf
+│   ├── providers.tf
+│   ├── outputs.tf
+│   ├── terraform.tfvars
 │   └── terraform.tfvars.example
 │
 ├── environments/
-│   ├── dev/                    # Layer 2 – per-environment data services
-│   │   ├── main.tf              # database + cache modules
-│   │   ├── data.tf              # reads core-infra remote state
-│   │   ├── variables.tf / locals.tf / providers.tf
-│   │   └── terraform.tfvars.example
-│   └── prod/                    # identical structure to dev, separate state key
+│   ├── dev/                   # Development RDS and Redis
+│   └── prod/                  # Production RDS and Redis
 │
 └── modules/
-    ├── networking/   # VPC, subnets, route tables, IGW, VPC endpoints
-    ├── security/     # security groups + rules for every tier
-    ├── iam/           # EKS cluster/worker roles, EBS CSI + ESO Pod Identity roles
-    ├── eks/           # EKS cluster, managed node group, add-ons
-    ├── database/      # RDS PostgreSQL + Secrets Manager secret
-    └── cache/         # ElastiCache Redis + SSM parameter
+    ├── networking/            # VPC, subnets, routes, endpoints and optional NAT
+    ├── security/              # Security groups and rules
+    ├── iam/                   # EKS, worker, EBS CSI, ESO and LB Controller IAM
+    ├── eks/                   # EKS cluster, node group and managed add-ons
+    ├── database/              # RDS PostgreSQL and Secrets Manager
+    └── cache/                 # ElastiCache Redis and Secrets Manager
 ```
 
-`core-infra` and each environment are **independent root modules** with their own state files — `core-infra` must be applied first, since `environments/*` read its outputs via a remote state data source.
+`core-infra` and each environment are independent Terraform root modules with separate state files. The environment layers consume required outputs from `core-infra` using `terraform_remote_state`.
 
-## Design decisions worth knowing
+## Terraform Layers
 
-| Decision | Why it matters |
+### `core-infra`
+
+Creates the shared platform:
+
+- VPC and networking
+- VPC endpoints
+- Optional NAT Gateway
+- Security groups
+- IAM roles and policies
+- EKS cluster
+- EKS managed node group
+- EKS managed add-ons
+- EKS Pod Identity associations
+- AWS Load Balancer Controller Helm release
+- External Secrets Operator Helm release
+- ESO ClusterSecretStore Helm chart
+
+### `environments/dev`
+
+Creates development data services:
+
+- RDS PostgreSQL
+- ElastiCache Redis
+
+### `environments/prod`
+
+Creates production data services using the same modules with production-specific values.
+
+## Module Reference
+
+| Module | Creates |
 |---|---|
-| No NAT Gateway | Removes NAT Gateway cost and reduces the worker nodes' network exposure; all AWS API traffic goes over VPC endpoints instead. Any workload that needs to reach the public internet (e.g. pulling from a public registry that isn't ECR) will need an explicit egress path added. |
-| SPOT capacity by default | Lower cost for the node group; `capacity_type` can be switched to `ON_DEMAND` per environment. |
-| Pod Identity instead of IRSA | Simpler trust policy (`pods.eks.amazonaws.com`) than an OIDC provider + IRSA trust relationship, at the cost of requiring the `eks-pod-identity-agent` add-on. |
-| `skip_final_snapshot` / `deletion_protection` are per-environment | Dev is optimized for fast teardown; production should set `deletion_protection = true` and `skip_final_snapshot = false`. |
-| Redis `transit_encryption_enabled = false` | Traffic stays inside the private subnets and worker security group; revisit if compliance requires encryption in transit. |
-| `core-infra` and `environments/*` are separate state files | Lets the platform team manage the cluster/network independently from whoever manages per-environment data services, and lets `dev`/`prod` be destroyed and rebuilt without touching the shared cluster. |
+| `networking` | VPC, public/private subnets, route tables, Internet Gateway, VPC endpoints and optional NAT Gateway |
+| `security` | EKS, worker, RDS, Redis and VPC endpoint security groups and rules |
+| `iam` | EKS cluster/worker roles, EBS CSI role, ESO role and Load Balancer Controller role |
+| `eks` | EKS cluster, EC2 launch template, managed node group, managed add-ons and Pod Identity associations |
+| `database` | RDS PostgreSQL, subnet/parameter groups, generated password and Secrets Manager secret |
+| `cache` | ElastiCache Redis, subnet/parameter groups and Secrets Manager Redis URL secret |
 
-## Prerequisites
+## EKS Configuration
 
-- Terraform `>= 1.5` (uses the S3 backend's native `use_lockfile` locking, available from AWS provider `~> 6.0` / recent Terraform releases — no DynamoDB lock table is used).
-- An existing S3 bucket for state: `repo-1358538824-tfstate` (or update the `bucket` value in every `providers.tf` / `data.tf` to your own bucket).
-- AWS credentials with permission to create VPCs, EKS, RDS, ElastiCache, IAM roles, and Secrets Manager/SSM resources.
-- `kubectl` and `aws-cli` if you intend to interact with the cluster after it's created.
-- Your workstation/CI runner's public IP for `public_access_cidr` (used to allow-list access to the EKS API server).
+The EKS platform currently includes:
 
-## Backend & state
+```text
+Kubernetes version       1.36
+Worker subnets           Private
+Node AMI                 AL2023
+Capacity                 SPOT / ON_DEMAND
+Node scaling             Configurable
+EBS volumes              Encrypted gp3
+Instance metadata        IMDSv2 required
+```
 
-Every root module (`core-infra`, `environments/dev`, `environments/prod`) uses an S3 backend with a distinct state key:
+Managed add-ons:
 
-| Root module | State key |
+```text
+vpc-cni
+aws-ebs-csi-driver
+coredns
+kube-proxy
+eks-pod-identity-agent
+metrics-server
+```
+
+Workload AWS access uses **EKS Pod Identity** rather than IRSA.
+
+## Network Design
+
+Private subnets do not require a NAT Gateway for the AWS services covered by the configured VPC endpoints.
+
+```text
+Private Subnets
+      │
+      ├── EKS
+      ├── RDS
+      ├── Redis
+      │
+      └── VPC Endpoints
+            ├── ECR
+            ├── EKS
+            ├── STS
+            ├── SSM
+            ├── Secrets Manager
+            ├── CloudWatch Logs
+            ├── ELB
+            └── Auto Scaling
+```
+
+`enable_nat_gateway = true` can temporarily add a NAT Gateway and a default route from the private route table to the NAT Gateway. Keep it disabled when private AWS-service connectivity through endpoints is sufficient.
+
+## Secrets
+
+RDS credentials are generated by Terraform and stored in AWS Secrets Manager.
+
+Redis connection information is also stored in Secrets Manager.
+
+External Secrets Operator uses a dedicated IAM role through EKS Pod Identity and a `ClusterSecretStore` configured for AWS Secrets Manager.
+
+The IAM policy is scoped to secrets using the project-name prefix rather than granting account-wide Secrets Manager access.
+
+## Backend & State
+
+Each Terraform root uses a separate S3 state key:
+
+| Root | State key |
 |---|---|
 | `core-infra` | `cloudcart-eks/core-infra/terraform.tfstate` |
 | `environments/dev` | `cloudcart-eks/environments/dev/terraform.tfstate` |
 | `environments/prod` | `cloudcart-eks/environments/prod/terraform.tfstate` |
 
-`environments/*/data.tf` reads the `core-infra` state directly (`private_subnet_ids`, `rds_sg_id`, `redis_sg_id`) via `terraform_remote_state`, so `core-infra` must be applied — and its outputs must exist — before any environment layer is applied.
+The S3 backend uses encryption and the native S3 lockfile mechanism.
+
+## Prerequisites
+
+- Terraform `>= 1.5`
+- AWS CLI
+- AWS credentials with permissions to create the required resources
+- Existing S3 bucket configured in the Terraform backend
+- `kubectl` for EKS access
+- A trusted public IP/CIDR for `public_access_cidr`
 
 ## Usage
 
-1. **Deploy the shared platform layer:**
+### Deploy Core Infrastructure
 
-   ```bash
-   cd terraform/core-infra
-   cp terraform.tfvars.example terraform.tfvars   # edit values, especially public_access_cidr
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+```bash
+cd terraform/core-infra
 
-2. **Deploy an environment's data services** (repeat per environment):
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars
 
-   ```bash
-   cd terraform/environments/dev      # or environments/prod
-   cp terraform.tfvars.example terraform.tfvars   # edit values
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+terraform init
+terraform fmt
+terraform validate
+terraform plan
+terraform apply
+```
 
-3. **Connect to the cluster:**
+### Deploy Development
 
-   ```bash
-   aws eks update-kubeconfig --name cloudcart-eks-cluster --region <region>
-   ```
+```bash
+cd terraform/environments/dev
 
-4. **Tear down** in reverse order — environments first, then `core-infra` — since the environment layers depend on core-infra's outputs:
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars
 
-   ```bash
-   cd terraform/environments/dev && terraform destroy
-   cd terraform/core-infra && terraform destroy
-   ```
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
 
-## Module reference
+### Deploy Production
 
-| Module | Creates |
+```bash
+cd terraform/environments/prod
+
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars
+
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Configure kubectl
+
+```bash
+aws eks update-kubeconfig \
+  --name <eks-cluster-name> \
+  --region <region>
+```
+
+## Important Variables
+
+### Core Infrastructure
+
+| Variable | Description |
 |---|---|
-| `modules/networking` | VPC, public/private subnets (one pair per AZ), Internet Gateway, public/private route tables + associations, S3 gateway endpoint, interface endpoints for EKS/ECR/STS/SSM/Secrets Manager/Logs/ELB/Auto Scaling |
-| `modules/security` | Security groups and ingress/egress rules for RDS, Redis, VPC endpoints, EKS control plane, and EKS worker nodes |
-| `modules/iam` | EKS cluster role, EKS worker role (+ CNI/ECR-readonly/SSM policies), EBS CSI Pod Identity role, External Secrets Operator Pod Identity role + least-privilege Secrets Manager/SSM policy |
-| `modules/eks` | EKS cluster, launch template + managed node group, `vpc-cni`/`coredns`/`kube-proxy`/`eks-pod-identity-agent`/`aws-ebs-csi-driver` add-ons, Pod Identity associations for EBS CSI and ESO |
-| `modules/database` | RDS PostgreSQL instance, DB subnet group, parameter group, random master password, Secrets Manager secret with connection details |
-| `modules/cache` | ElastiCache Redis replication group, subnet group, parameter group, SSM parameter with the Redis connection URL |
+| `region` | AWS deployment region |
+| `project_name` | Resource naming prefix |
+| `vpc_cidr` | VPC CIDR |
+| `public_subnet_cidrs` | Public subnet CIDRs |
+| `private_subnet_cidrs` | Private subnet CIDRs |
+| `enable_nat_gateway` | Enables/disables the temporary NAT Gateway |
+| `kubernetes_version` | EKS Kubernetes version |
+| `public_access_cidr` | CIDRs allowed to access the public EKS API |
+| `min_size` / `max_size` / `desired_size` | EKS node group scaling |
+| `instance_types` | Worker EC2 instance types |
+| `disk_size` | Worker root volume size |
+| `capacity_type` | `SPOT` or `ON_DEMAND` |
 
-## Variables
+### Environment Configuration
 
-### `core-infra`
+`dev` and `prod` configure their own:
 
-| Name | Type | Default | Description |
-|---|---|---|---|
-| `project_name` | `string` | – | Prefix used for resource names/tags |
-| `region` | `string` | – | AWS region (validated, e.g. `us-east-1`) |
-| `vpc_cidr` | `string` | – | VPC CIDR block |
-| `public_subnet_cidrs` | `list(string)` | – | One CIDR per public subnet/AZ |
-| `private_subnet_cidrs` | `list(string)` | – | One CIDR per private subnet/AZ |
-| `kubernetes_version` | `string` | `1.36` | EKS cluster version |
-| `public_access_cidr` | `list(string)` | – | Allow-listed CIDRs for the public EKS API endpoint |
-| `min_size` / `max_size` / `desired_size` | `number` | `1` / `3` / `2` | Node group scaling config |
-| `instance_types` | `list(string)` | – | Node group EC2 instance types |
-| `disk_size` | `number` | `20` | Worker node root volume (GiB) |
-| `capacity_type` | `string` | `SPOT` | `SPOT` or `ON_DEMAND` |
+- `db_instance_config`
+- `cache_config`
 
-### `environments/dev` and `environments/prod`
+See the corresponding `terraform.tfvars.example` files for annotated configuration.
 
-| Name | Type | Description |
-|---|---|---|
-| `project_name` | `string` | Must match `core-infra` |
-| `environment` | `string` | `dev` or `prod` (validated) |
-| `region` | `string` | AWS region |
-| `db_instance_config` | `object` | `allocated_storage`, `family`, `engine`, `engine_version`, `instance_class`, `db_name`, `username`, `multi_az`, `backup_retention`, `deletion_protection`, `skip_final_snapshot` |
-| `cache_config` | `object` | `engine_version`, `node_type`, `automatic_failover_enabled`, `multi_az_enabled` |
+## Security
 
-See the `terraform.tfvars.example` file in each root module for annotated example values (dev is sized for low cost; prod should be reviewed and hardened before use).
+- EKS workers, RDS and Redis run in private subnets.
+- RDS and Redis are not publicly accessible.
+- EKS public API access is restricted through `public_access_cidr`.
+- Worker EBS volumes are encrypted.
+- IMDSv2 is required on worker nodes.
+- Workload AWS permissions use dedicated EKS Pod Identity roles.
+- ESO Secrets Manager permissions are scoped to project-prefixed secrets.
+- Terraform state is stored remotely in an encrypted S3 backend.
 
-## Outputs
+## Future Improvements
 
-| Root module | Output | Description |
-|---|---|---|
-| `core-infra` | `private_subnet_ids` | Private subnet IDs, consumed by environment layers |
-| `core-infra` | `rds_sg_id` | Security group ID for RDS, consumed by `environments/*` |
-| `core-infra` | `redis_sg_id` | Security group ID for Redis, consumed by `environments/*` |
-| `modules/eks` | `eks_cluster_name` | EKS cluster name |
-| `modules/networking` | `vpc_id`, `public_subnet_ids`, `private_subnet_ids` | Core network identifiers |
-| `modules/iam` | `eks_cluster_role_arn`, `eks_worker_role_arn`, `ebs_csi_role_arn`, `eso_role_arn` | IAM role ARNs |
-| `modules/security` | `vpc_endpoint_sg_id`, `rds_sg_id`, `redis_sg_id`, `eks_cluster_sg_id`, `eks_worker_sg_id` | Security group IDs |
-| `modules/cache` | `redis_endpoint` | ElastiCache primary endpoint address |
+- [ ] Review and harden production RDS settings
+- [ ] Review Redis HA and enable transit encryption where required
+- [ ] Review VPC endpoint policies
+- [ ] Add VPC Flow Logs
+- [ ] Add EKS control-plane logging
+- [ ] Further reduce IAM permissions where possible
+- [ ] Add Terraform CI validation and security scanning
+- [ ] Review state bucket backup and recovery controls
+- [ ] Remove the temporary NAT Gateway when no longer required
 
-## Security notes
+## Cost Notes
 
-- RDS and ElastiCache are **not publicly accessible** and only accept traffic from the EKS worker security group.
-- The EKS API server's public endpoint is restricted to `public_access_cidr` — set this to your admin/CI IP ranges, not `0.0.0.0/0`.
-- EBS volumes on worker nodes are encrypted (`gp3`, `encrypted = true`), and IMDSv2 is enforced (`http_tokens = "required"`) on the node launch template.
-- Database credentials are generated with `random_password` and stored only in Secrets Manager — they are never written to `terraform.tfvars`.
-- The ESO IAM policy scopes `secretsmanager:GetSecretValue` and `ssm:GetParameter*` to ARNs prefixed with the project name, rather than granting account-wide read access.
-
-## Cost notes
-
-- No NAT Gateway (≈ $0.045/hr + data processing avoided) — traffic instead flows through VPC endpoints, some of which (interface endpoints) have their own hourly + per-GB cost, so this is a net saving mainly when egress volume is significant.
-- The node group defaults to SPOT capacity; switch `capacity_type` to `ON_DEMAND` for workloads that can't tolerate interruption.
-- `dev` is configured for `db.t3.micro` / `cache.t4g.micro`, single-AZ, 1-day backup retention, and `skip_final_snapshot = true` to keep teardown cheap and fast — review and increase these for `prod`.
+- NAT Gateway is disabled by default and can be enabled temporarily when required.
+- Interface VPC endpoints have hourly and data-processing costs.
+- EKS workers use SPOT capacity by default.
+- Development RDS and Redis configurations are intentionally cost-conscious.
