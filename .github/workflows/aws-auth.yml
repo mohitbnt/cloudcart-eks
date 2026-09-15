@@ -1,0 +1,31 @@
+name: AWS OIDC Authentication for GitHub Actions
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: 
+  id-token: write
+  contents: read
+
+jobs:
+  aws-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume the AWS Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions
+          audience: sts.amazonaws.com
+      
+      - name: Print AWS Account, UserID and ARN
+        run: |
+          echo "Verifying AWS Account, UserID and ARN"
+          aws sts get-caller-identity --query "[Account, Arn, UserId]" --output table
