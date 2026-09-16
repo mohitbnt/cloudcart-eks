@@ -98,6 +98,11 @@ variable "eks_worker_sg_id" {
   description = "Security group ID used by the EKS worker nodes."
 }
 
+variable "eks_admin_principal_arn" {
+  description = "IAM principal ARN granted administrative access to the EKS cluster"
+  type        = string
+}
+
 # --------------------------------------------------------------------------------
 # 3. EBS CSI Variables
 # --------------------------------------------------------------------------------

@@ -106,3 +106,8 @@ variable "capacity_type" {
   description = "Capacity type used by the EKS node group."
   default     = "SPOT"
 }
+
+variable "eks_admin_principal_arn" {
+  description = "IAM principal ARN granted administrative access to the EKS cluster"
+  type        = string
+}
