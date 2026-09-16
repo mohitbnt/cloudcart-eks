@@ -40,7 +40,7 @@ private_subnet_cidrs = [
 # Type: bool
 # Default: false
 # Example: true
-enable_nat_gateway = true
+enable_nat_gateway = false
 
 # ============================================================
 # Amazon EKS
