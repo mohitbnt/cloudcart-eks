@@ -169,10 +169,7 @@ jobs:
       - name: Deploy ESO Secret Store Configuration
         working-directory: ./kubernetes/addons
         run: |
-          helm upgrade --install eso-config ./eso-config \
-            --namespace external-secrets \
-            --set storeName="aws-secrets-backend" \
-            --set awsRegion="${{ vars.AWS_REGION }}"
+          kubectl apply -f ./eso-config/cluster-secret-store.yaml
 
       # --------------------------------------------------------------------------
       # Remove Temporary NAT Gateway
