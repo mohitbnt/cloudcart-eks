@@ -25,3 +25,10 @@ output "redis_sg_id" {
 output "cluster_name" {
   value = module.eks.cluster_name
 }
+
+# --------------------------------------------------------------------------------
+# 5. Publish VPC ID
+# --------------------------------------------------------------------------------
+output "vpc_id" {
+  value = module.networking.vpc_id
+}
