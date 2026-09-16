@@ -60,7 +60,7 @@ kubernetes_version = "1.36"
 # IMPORTANT:
 # Replace this example value with the public IP/network that should
 # be allowed to access the EKS API.
-public_access_cidr = [local.my_public_ip, "106.219.145.226/32"]
+office_ips = []
 
 
 # ============================================================
