@@ -109,10 +109,10 @@ resource "aws_eks_pod_identity_association" "eso_pod_identity" {
 # 7. Create EKS Pod Identity Association for LB Controller
 # --------------------------------------------------------------------------------
 resource "aws_eks_pod_identity_association" "lb_controller_pod_identity" {
-  cluster_name = aws_eks_cluster.main_eks_cluster.name
-  namespace    = "kube-system"
+  cluster_name    = aws_eks_cluster.main_eks_cluster.name
+  namespace       = "kube-system"
   service_account = "aws-load-balancer-controller"
-  role_arn     = var.lb_controller_role_arn
+  role_arn        = var.lb_controller_role_arn
 }
 
 # --------------------------------------------------------------------------------
