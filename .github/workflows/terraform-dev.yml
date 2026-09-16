@@ -1,0 +1,60 @@
+name: Development Infrastructure
+
+on: 
+  workflow_dispatch:
+
+permissions: 
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-dev-infra:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume the AWS role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-actions-terraform-dev-infra
+          audience: sts.amazonaws.com
+      
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      
+      - name: Terraform Format
+        id: fmt
+        working-directory: ./terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform generate terraform.tfvars
+        id: tfvars
+        working-directory: ./terraform/environments/dev
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+      
+      - name: Terraform Init
+        id: init
+        working-directory: ./terraform/environments/dev
+        run: terraform init -input=false -backend-config=dev-infra-backend.conf
+      
+      - name: Terraform Validate
+        id: validate
+        working-directory: ./terraform/environments/dev
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./terraform/environments/dev
+        run: terraform plan -input=false -out=dev-infra.tfplan -var-file=terraform.tfvars
+
+      - name: Terraform Apply
+        id: apply
+        working-directory: ./terraform/environments/dev
+        run: terraform apply -input=false -auto-approve dev-infra.tfplan
