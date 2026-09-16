@@ -47,9 +47,9 @@ variable "kubernetes_version" {
   default     = "1.36"
 }
 
-variable "public_access_cidr" {
+variable "office_ips" {
   type        = list(string)
-  description = "CIDR block used to allow public access to the EKS cluster."
+  description = "CIDR blocks allowed to access the public EKS Kubernetes API endpoint."
 }
 
 

@@ -12,7 +12,7 @@ resource "aws_eks_cluster" "main_eks_cluster" {
     endpoint_private_access = true
     endpoint_public_access  = true
 
-    public_access_cidrs = var.public_access_cidr
+    public_access_cidrs = local.all_allowed_cidrs
   }
 
   depends_on = [var.eks_cluster_role_arn]

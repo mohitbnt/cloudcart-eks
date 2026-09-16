@@ -57,7 +57,7 @@ module "eks" {
   eks_worker_role_arn    = module.iam.eks_worker_role_arn
   eks_cluster_sg_id      = module.security.eks_cluster_sg_id
   kubernetes_version     = var.kubernetes_version
-  public_access_cidr     = var.public_access_cidr
+  office_ips             = var.office_ips
   eks_worker_sg_id       = module.security.eks_worker_sg_id
   min_size               = var.min_size
   max_size               = var.max_size
