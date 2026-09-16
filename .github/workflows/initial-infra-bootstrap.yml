@@ -10,6 +10,8 @@ permissions:
 jobs:
   terraform-core-infra:
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_eks_admin_principal_arn: ${{ vars.EKS_ADMIN_ARN }}
 
     steps:
       # --------------------------------------------------------------------------
