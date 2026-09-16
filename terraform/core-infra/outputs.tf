@@ -18,3 +18,10 @@ output "rds_sg_id" {
 output "redis_sg_id" {
   value = module.security.redis_sg_id
 }
+
+# --------------------------------------------------------------------------------
+# 4. Publish EKS Cluster Name
+# --------------------------------------------------------------------------------
+output "cluster_name" {
+  value = module.eks.cluster_name
+}
