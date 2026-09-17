@@ -26,22 +26,23 @@ resource "aws_eks_cluster" "main_eks_cluster" {
 }
 
 # -----------------------------------------------------------------------------
-# 2. Create EKS Acccess Entry
+# 2. Create EKS Acccess Entry for Admins
 # -----------------------------------------------------------------------------
-resource "aws_eks_access_entry" "admin" {
+resource "aws_eks_access_entry" "admins" {
+  for_each      = toset(var.eks_admins)
   cluster_name  = aws_eks_cluster.main_eks_cluster.name
-  principal_arn = var.eks_admin_principal_arn
+  principal_arn = each.value
   type          = "STANDARD"
 }
 
 # -----------------------------------------------------------------------------
-# 3. Associate EKS access policy
+# 3. Associate EKS access policy for Admins
 # -----------------------------------------------------------------------------
-resource "aws_eks_access_policy_association" "admin" {
+resource "aws_eks_access_policy_association" "admins" {
+  for_each      = toset(var.eks_admins)
   cluster_name  = aws_eks_cluster.main_eks_cluster.name
-  principal_arn = aws_eks_access_entry.admin.principal_arn
-
-  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.admins[each.value].principal_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
   access_scope {
     type = "cluster"

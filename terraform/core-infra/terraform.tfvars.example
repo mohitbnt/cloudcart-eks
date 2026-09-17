@@ -101,3 +101,6 @@ disk_size = 20
 #
 # SPOT reduces cost but instances can be interrupted by AWS.
 capacity_type = "SPOT"
+
+# IAM principal ARN granted administrative access to the EKS cluster
+eks_admins = []

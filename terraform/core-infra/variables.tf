@@ -107,7 +107,7 @@ variable "capacity_type" {
   default     = "SPOT"
 }
 
-variable "eks_admin_principal_arn" {
-  description = "IAM principal ARN granted administrative access to the EKS cluster"
-  type        = string
+variable "eks_admins" {
+  type        = list(string)
+  description = "List of IAM User or Role ARNs that need Cluster Admin access"
 }

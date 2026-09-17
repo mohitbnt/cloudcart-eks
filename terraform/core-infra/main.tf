@@ -52,23 +52,23 @@ module "eks" {
   region       = var.region
   common_tags  = local.common_tags
 
-  private_subnet_ids      = module.networking.private_subnet_ids
-  eks_cluster_role_arn    = module.iam.eks_cluster_role_arn
-  eks_worker_role_arn     = module.iam.eks_worker_role_arn
-  eks_cluster_sg_id       = module.security.eks_cluster_sg_id
-  kubernetes_version      = var.kubernetes_version
-  office_ips              = var.office_ips
-  eks_worker_sg_id        = module.security.eks_worker_sg_id
-  min_size                = var.min_size
-  max_size                = var.max_size
-  desired_size            = var.desired_size
-  instance_types          = var.instance_types
-  disk_size               = var.disk_size
-  capacity_type           = var.capacity_type
-  ebs_csi_role_arn        = module.iam.ebs_csi_role_arn
-  eso_role_arn            = module.iam.eso_role_arn
-  lb_controller_role_arn  = module.iam.lb_controller_role_arn
-  eks_admin_principal_arn = var.eks_admin_principal_arn
+  private_subnet_ids     = module.networking.private_subnet_ids
+  eks_cluster_role_arn   = module.iam.eks_cluster_role_arn
+  eks_worker_role_arn    = module.iam.eks_worker_role_arn
+  eks_cluster_sg_id      = module.security.eks_cluster_sg_id
+  kubernetes_version     = var.kubernetes_version
+  office_ips             = var.office_ips
+  eks_worker_sg_id       = module.security.eks_worker_sg_id
+  min_size               = var.min_size
+  max_size               = var.max_size
+  desired_size           = var.desired_size
+  instance_types         = var.instance_types
+  disk_size              = var.disk_size
+  capacity_type          = var.capacity_type
+  ebs_csi_role_arn       = module.iam.ebs_csi_role_arn
+  eso_role_arn           = module.iam.eso_role_arn
+  lb_controller_role_arn = module.iam.lb_controller_role_arn
+  eks_admins             = var.eks_admins
 
   depends_on = [
     module.networking,
