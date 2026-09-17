@@ -10,9 +10,6 @@ permissions:
 jobs:
   terraform-core-infra:
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_eks_admins: |
-        ["${{ vars.EKS_ADMIN_ARN }}", "${{ vars.OIDC_ROLE_ARN }}"]
 
     steps:
       # --------------------------------------------------------------------------
@@ -85,7 +82,8 @@ jobs:
             -input=false \
             -out=core-infra.tfplan \
             -var-file=terraform.tfvars \
-            -var="enable_nat_gateway=true"
+            -var="enable_nat_gateway=true" \
+            -var="["${{ vars.EKS_ADMIN_ARN }}", "${{ vars.OIDC_ROLE_ARN }}"]"
 
       - name: Terraform Apply - Bootstrap with NAT Gateway
         id: apply
