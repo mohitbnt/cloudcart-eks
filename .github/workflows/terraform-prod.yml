@@ -42,7 +42,7 @@ jobs:
       - name: Terraform Init
         id: init
         working-directory: ./terraform/environments/prod
-        run: terraform init -input=false -backend-config=prod-infra-backend.conf
+        run: terraform init -input=false -backend-config=prod-backend.conf
       
       - name: Terraform Validate
         id: validate
