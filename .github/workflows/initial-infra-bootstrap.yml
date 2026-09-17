@@ -83,7 +83,7 @@ jobs:
             -out=core-infra.tfplan \
             -var-file=terraform.tfvars \
             -var="enable_nat_gateway=true" \
-            -var="["${{ vars.EKS_ADMIN_ARN }}", "${{ vars.OIDC_ROLE_ARN }}"]"
+            -var="eks_admins=[\"${{ vars.EKS_ADMIN_ARN }}\",\"${{ vars.OIDC_ROLE_ARN }}\"]"
 
       - name: Terraform Apply - Bootstrap with NAT Gateway
         id: apply
