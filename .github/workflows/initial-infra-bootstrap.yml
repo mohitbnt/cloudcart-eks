@@ -11,7 +11,7 @@ jobs:
   terraform-core-infra:
     runs-on: ubuntu-latest
     env:
-      TF_VAR_eks_admin_principal_arn: ${{ vars.EKS_ADMIN_ARN }}
+      TF_VAR_eks_admins: '["${{ vars.EKS_ADMIN_ARN }}", "${{ vars.OIDC_ROLE_ARN }}"]'
 
     steps:
       # --------------------------------------------------------------------------
