@@ -141,6 +141,27 @@ jobs:
             --namespace external-secrets \
             --create-namespace \
             --set installCRDs=true
+      # --------------------------------------------------------------------------
+      # Wait for External Secrets Operator to be ready
+      # --------------------------------------------------------------------------
+      - name: Wait for External Secrets Operator to be ready
+        run: |
+          kubectl wait \
+            --namespace external-secrets \
+            --for=condition=available \
+            deployment/external-secrets \
+            --timeout=180s
+          kubectl wait \
+            --namespace external-secrets \
+            --for=condition=available \
+            deployment/external-secrets-webhook \
+            --timeout=180s
+
+          kubectl wait \
+            --namespace external-secrets \
+            --for=condition=available \
+            deployment/external-secrets-cert-controller \
+            --timeout=180s
 
       # --------------------------------------------------------------------------
       # Install AWS Load Balancer Controller
