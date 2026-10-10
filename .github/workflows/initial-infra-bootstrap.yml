@@ -194,6 +194,22 @@ jobs:
           kubectl apply -f ./eso-config/cluster-secret-store.yaml
 
       # --------------------------------------------------------------------------
+      # Deploy ArgoCD
+      # --------------------------------------------------------------------------
+      - name: Deploy ArgoCD
+        run : |
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+          helm upgrade --install argocd argo/argo-cd --version 2.5.10 \
+          --namespace argocd \
+          --create-namespace \
+          --set server.ingress.enabled=true \
+          --set server.ingress.hosts[0]=argocd.cloudcart.local \
+          --set server.ingress.annotations."kubernetes\.io/ingress\.class"=alb \/
+
+
+
+      # --------------------------------------------------------------------------
       # Remove Temporary NAT Gateway
       # --------------------------------------------------------------------------
       - name: Terraform Plan - Remove Temporary NAT Gateway
