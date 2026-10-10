@@ -15,6 +15,8 @@ resource "aws_eks_cluster" "main_eks_cluster" {
     public_access_cidrs = local.all_allowed_cidrs
   }
 
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
   access_config {
     authentication_mode = "API"
   }

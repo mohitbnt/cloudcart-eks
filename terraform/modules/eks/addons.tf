@@ -8,6 +8,14 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
+  configuration_values = jsonencode({
+    enableNetworkPolicy = true
+    nodeAgent = {
+      enablePolicyEventLogs = true
+      enableCloudWatchLogs  = true
+    }
+  })
+
   depends_on = [
     aws_eks_cluster.main_eks_cluster
   ]
