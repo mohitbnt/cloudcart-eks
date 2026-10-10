@@ -111,10 +111,15 @@ resource "aws_route_table_association" "private_subnet_association" {
 }
 
 # --------------------------------------------------------------------------------
+# Optional: VPC Endpoints for S3 and other services if NAT gateway is not enabled.
+# --------------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------------
 # 10. Create S3 VPC endpoint
 # --------------------------------------------------------------------------------
 
 resource "aws_vpc_endpoint" "s3_vpc_endpoint" {
+  count             = var.enable_vpc_endpoints ? 1 : 0
   vpc_id            = aws_vpc.main_vpc.id
   service_name      = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type = "Gateway"
@@ -130,8 +135,9 @@ resource "aws_vpc_endpoint" "s3_vpc_endpoint" {
 # --------------------------------------------------------------------------------
 
 resource "aws_vpc_endpoint" "interface_vpc_endpoint" {
-  vpc_id              = aws_vpc.main_vpc.id
-  for_each            = local.interface_endpoints
+  vpc_id = aws_vpc.main_vpc.id
+
+  for_each            = var.enable_vpc_endpoints ? local.interface_endpoints : {}
   service_name        = each.value
   vpc_endpoint_type   = "Interface"
   security_group_ids  = [var.vpc_endpoint_sg_id]

@@ -14,6 +14,7 @@ module "networking" {
   private_subnet_cidrs = var.private_subnet_cidrs
   vpc_endpoint_sg_id   = module.security.vpc_endpoint_sg_id
   enable_nat_gateway   = var.enable_nat_gateway
+  enable_vpc_endpoints = var.enable_vpc_endpoints
 }
 
 # --------------------------------------------------------------------------------

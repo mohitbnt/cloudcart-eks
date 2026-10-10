@@ -36,11 +36,17 @@ private_subnet_cidrs = [
   "10.0.22.0/24"
 ]
 
-# Controls if a temporary NAT Gateway is provisioned.
+# Controls if NAT Gateway is provisioned.
+# Type: bool
+# Default: true
+# Example: true
+enable_nat_gateway = true
+
+# Controls if VPC endpoints are provisioned for S3 and other AWS services.
 # Type: bool
 # Default: false
-# Example: true
-enable_nat_gateway = false
+# Example: false
+enable_vpc_endpoints = false
 
 # ============================================================
 # Amazon EKS

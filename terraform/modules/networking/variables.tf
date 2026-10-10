@@ -58,9 +58,16 @@ variable "private_subnet_cidrs" {
 
 variable "enable_nat_gateway" {
   type        = bool
-  default     = false
-  description = "Controls if a temporary NAT Gateway is provisioned. Keep false for private isolation; set true during initial setup/bootstrapping."
+  default     = true
+  description = "Toggle NAT Gateway provisioning. Enable for initial cluster bootstrapping or general internet access; disable if using VPC endpoints instead."
 }
+
+variable "enable_vpc_endpoints" {
+  type        = bool
+  default     = false
+  description = "Toggle VPC endpoints for S3 and other AWS services. Enable to route traffic internally and save costs when a NAT Gateway is disabled."
+}
+
 
 variable "vpc_endpoint_sg_id" {
   type        = string
