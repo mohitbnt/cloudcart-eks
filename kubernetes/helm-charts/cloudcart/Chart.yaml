@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cloudcart
+description: Helm chart for CloudCart microservices platform deployed on AWS EKS
+type: application
+version: 0.1.0
+kubeVersion: ">= 1.26.0"
+keywords:
+  - cloudcart
+  - microservices
+  - eks
+  - aws

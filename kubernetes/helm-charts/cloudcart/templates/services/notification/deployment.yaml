@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-notification-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: notification-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.notification.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "notification" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "notification" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-notification-container
+          image: "{{ .Values.notification.image.repository }}:{{ .Values.global.imageTag | default .Values.notification.image.tag }}"
+          imagePullPolicy: {{ .Values.notification.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.notification.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+          resources:
+            {{- toYaml .Values.notification.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.notification.probes.healthPath }}
+              port: {{ .Values.notification.service.targetPort }}
+            initialDelaySeconds: {{ .Values.notification.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.notification.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.notification.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.notification.probes.healthPath }}
+              port: {{ .Values.notification.service.targetPort }}
+            periodSeconds: {{ .Values.notification.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.notification.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.notification.probes.healthPath }}
+              port: {{ .Values.notification.service.targetPort }}
+            periodSeconds: {{ .Values.notification.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.notification.probes.timeoutSeconds }}
+            failureThreshold: 3

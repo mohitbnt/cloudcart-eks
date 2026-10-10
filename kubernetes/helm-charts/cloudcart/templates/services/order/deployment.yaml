@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-order-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: order-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.order.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "order" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "order" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-order-container
+          image: "{{ .Values.order.image.repository }}:{{ .Values.global.imageTag | default .Values.order.image.tag }}"
+          imagePullPolicy: {{ .Values.order.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.order.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+            - name: INVENTORY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: INVENTORY_URL
+                  name: cloudcart-configmap
+            - name: PAYMENT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: PAYMENT_URL
+                  name: cloudcart-configmap
+          resources:
+            {{- toYaml .Values.order.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.order.probes.healthPath }}
+              port: {{ .Values.order.service.targetPort }}
+            initialDelaySeconds: {{ .Values.order.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.order.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.order.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.order.probes.healthPath }}
+              port: {{ .Values.order.service.targetPort }}
+            periodSeconds: {{ .Values.order.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.order.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.order.probes.healthPath }}
+              port: {{ .Values.order.service.targetPort }}
+            periodSeconds: {{ .Values.order.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.order.probes.timeoutSeconds }}
+            failureThreshold: 3

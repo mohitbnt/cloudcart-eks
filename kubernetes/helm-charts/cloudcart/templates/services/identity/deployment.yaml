@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-identity-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: identity-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.identity.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "identity" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "identity" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-identity-container
+          image: "{{ .Values.identity.image.repository }}:{{ .Values.global.imageTag | default .Values.identity.image.tag }}"
+          imagePullPolicy: {{ .Values.identity.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.identity.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: redis_url
+            - name: SESSION_COOKIE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: SESSION_COOKIE_NAME
+                  name: cloudcart-configmap
+            - name: SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  key: SESSION_COOKIE_SECURE
+                  name: cloudcart-configmap
+            - name: SESSION_TTL_SECONDS
+              valueFrom:
+                configMapKeyRef:
+                  key: SESSION_TTL_SECONDS
+                  name: cloudcart-configmap
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  key: ENVIRONMENT
+                  name: cloudcart-configmap
+          resources:
+            {{- toYaml .Values.identity.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.identity.probes.healthPath }}
+              port: {{ .Values.identity.service.targetPort }}
+            initialDelaySeconds: {{ .Values.identity.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.identity.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.identity.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.identity.probes.healthPath }}
+              port: {{ .Values.identity.service.targetPort }}
+            periodSeconds: {{ .Values.identity.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.identity.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.identity.probes.healthPath }}
+              port: {{ .Values.identity.service.targetPort }}
+            periodSeconds: {{ .Values.identity.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.identity.probes.timeoutSeconds }}
+            failureThreshold: 3

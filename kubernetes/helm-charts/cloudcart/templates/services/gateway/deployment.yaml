@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-gateway-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: gateway-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.gateway.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "gateway" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "gateway" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-gateway-container
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.global.imageTag | default .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.gateway.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: CATALOG_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: CATALOG_URL
+                  name: cloudcart-configmap
+            - name: IDENTITY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: IDENTITY_URL
+                  name: cloudcart-configmap
+            - name: CART_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: CART_URL
+                  name: cloudcart-configmap
+            - name: ORDER_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: ORDER_URL
+                  name: cloudcart-configmap
+            - name: NOTIFICATION_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: NOTIFICATION_URL
+                  name: cloudcart-configmap
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  key: ALLOWED_ORIGINS
+                  name: cloudcart-configmap
+            - name: INVENTORY_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: INVENTORY_URL
+                  name: cloudcart-configmap
+            - name: PAYMENT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: PAYMENT_URL
+                  name: cloudcart-configmap
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.gateway.probes.healthPath }}
+              port: {{ .Values.gateway.service.targetPort }}
+            initialDelaySeconds: {{ .Values.gateway.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.gateway.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.gateway.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.gateway.probes.healthPath }}
+              port: {{ .Values.gateway.service.targetPort }}
+            periodSeconds: {{ .Values.gateway.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.gateway.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.gateway.probes.healthPath }}
+              port: {{ .Values.gateway.service.targetPort }}
+            periodSeconds: {{ .Values.gateway.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.gateway.probes.timeoutSeconds }}
+            failureThreshold: 3

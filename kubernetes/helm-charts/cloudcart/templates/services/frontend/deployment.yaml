@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-frontend-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: frontend-deployment
+    app.kubernetes.io/component: frontend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.frontend.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "frontend" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "frontend" | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: cloudcart-frontend-container
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.global.imageTag | default .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.frontend.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: API_BASE
+              valueFrom:
+                configMapKeyRef:
+                  key: API_BASE
+                  name: cloudcart-configmap
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.frontend.probes.healthPath }}
+              port: {{ .Values.frontend.service.targetPort }}
+            initialDelaySeconds: {{ .Values.frontend.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.frontend.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.frontend.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.frontend.probes.healthPath }}
+              port: {{ .Values.frontend.service.targetPort }}
+            periodSeconds: {{ .Values.frontend.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.frontend.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.frontend.probes.healthPath }}
+              port: {{ .Values.frontend.service.targetPort }}
+            periodSeconds: {{ .Values.frontend.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.frontend.probes.timeoutSeconds }}
+            failureThreshold: 3

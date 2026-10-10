@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-cart-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: cart-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.cart.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "cart" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "cart" | nindent 8 }}
+        app.kubernetes.io/component: backend        
+    spec:
+      containers:
+        - name: cloudcart-cart-container
+          image: "{{ .Values.cart.image.repository }}:{{ .Values.global.imageTag | default .Values.cart.image.tag }}"
+          imagePullPolicy: {{ .Values.cart.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.cart.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: redis_url
+          resources:
+            {{- toYaml .Values.cart.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.cart.probes.healthPath }}
+              port: {{ .Values.cart.service.targetPort }}
+            initialDelaySeconds: {{ .Values.cart.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.cart.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.cart.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.cart.probes.healthPath }}
+              port: {{ .Values.cart.service.targetPort }}
+            periodSeconds: {{ .Values.cart.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.cart.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.cart.probes.healthPath }}
+              port: {{ .Values.cart.service.targetPort }}
+            periodSeconds: {{ .Values.cart.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.cart.probes.timeoutSeconds }}
+            failureThreshold: 3

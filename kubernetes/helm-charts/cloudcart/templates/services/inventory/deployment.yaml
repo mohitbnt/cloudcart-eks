@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-inventory-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: inventory-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.inventory.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "inventory" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "inventory" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-inventory-container
+          image: "{{ .Values.inventory.image.repository }}:{{ .Values.global.imageTag | default .Values.inventory.image.tag }}"
+          imagePullPolicy: {{ .Values.inventory.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.inventory.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+          resources:
+            {{- toYaml .Values.inventory.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.inventory.probes.healthPath }}
+              port: {{ .Values.inventory.service.targetPort }}
+            initialDelaySeconds: {{ .Values.inventory.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.inventory.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.inventory.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.inventory.probes.healthPath }}
+              port: {{ .Values.inventory.service.targetPort }}
+            periodSeconds: {{ .Values.inventory.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.inventory.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.inventory.probes.healthPath }}
+              port: {{ .Values.inventory.service.targetPort }}
+            periodSeconds: {{ .Values.inventory.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.inventory.probes.timeoutSeconds }}
+            failureThreshold: 3

@@ -1,0 +1,339 @@
+global:
+  imageTag: "1.0.0"
+
+# -----------------------------------------------------------------------------
+# External Secrets Store
+# -----------------------------------------------------------------------------
+externalSecrets:
+  clusterSecretStoreName: aws-secrets-backend
+
+# ------------------------------------------------------------------------------
+# Autoscaling
+# ------------------------------------------------------------------------------
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ------------------------------------------------------------------------------
+# Cart Microservice
+# ------------------------------------------------------------------------------
+cart:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-cart
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Catalog Microservice
+# ------------------------------------------------------------------------------
+catalog:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-catalog
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Frontend Microservice
+# ------------------------------------------------------------------------------
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-frontend
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Gateway Microservice
+# ------------------------------------------------------------------------------
+gateway:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-gateway
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Identity Microservice
+# ------------------------------------------------------------------------------
+identity:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-identity
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Inventory Microservice
+# ------------------------------------------------------------------------------
+inventory:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-inventory
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Notification Microservice
+# ------------------------------------------------------------------------------
+notification:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-notification
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Order Microservice
+# ------------------------------------------------------------------------------
+order:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-order
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# Payment Microservice
+# ------------------------------------------------------------------------------
+payment:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/mohitbnt/cloudcart-payment
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    healthPath: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+# ------------------------------------------------------------------------------
+# ConfigMap
+# ------------------------------------------------------------------------------
+config:
+  enabled: true
+  data:
+    CATALOG_URL: http://cloudcart-catalog-service:8000
+    IDENTITY_URL: http://cloudcart-identity-service:8000
+    CART_URL: http://cloudcart-cart-service:8000
+    ORDER_URL: http://cloudcart-order-service:8000
+    INVENTORY_URL: http://cloudcart-inventory-service:8000
+    PAYMENT_URL: http://cloudcart-payment-service:8000
+    NOTIFICATION_URL: http://cloudcart-notification-service:8000
+    SESSION_TTL_SECONDS: "86400"
+    SESSION_COOKIE_NAME: cloudcart_session
+    SESSION_COOKIE_SECURE: "false"
+    API_BASE: http://localhost:8000
+    ALLOWED_ORIGINS: http://localhost:3000
+
+# ------------------------------------------------------------------------------
+# Ingress
+# ------------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: "200"
+  rules:
+    - host: shop.cloudsystemonline.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: cloudcart-frontend-service
+            port: 80
+    - host: api.cloudsystemonline.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: cloudcart-gateway-service
+            port: 8000

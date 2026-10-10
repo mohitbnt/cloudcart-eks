@@ -1,0 +1,50 @@
+# Development overrides; combine with values.yaml when installing.
+global:
+  environment: dev
+  imageTag: "1.0.0"
+
+externalSecrets:
+  postgresql:
+    awsSecretName: cloudcart/dev/db-secrets
+  redis:
+    awsSecretName: cloudcart/dev/redis-url
+
+autoscaling:
+  enabled: false
+
+config:
+  data:
+    ENVIRONMENT: dev
+    SESSION_COOKIE_SECURE: "false"
+    API_BASE: https://devapi.cloudsystemonline.com
+    ALLOWED_ORIGINS: https://devshop.cloudsystemonline.com
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: "200"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:533317135122:certificate/5d4ad4b5-b2d0-4100-9a7b-3171b126278f
+  rules:
+    - host: devshop.cloudsystemonline.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: cloudcart-frontend-service
+            port: 80
+    - host: devapi.cloudsystemonline.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: cloudcart-gateway-service
+            port: 8000

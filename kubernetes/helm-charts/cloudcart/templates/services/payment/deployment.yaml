@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-payment-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: payment-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.payment.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "payment" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "payment" | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: cloudcart-payment-container
+          image: "{{ .Values.payment.image.repository }}:{{ .Values.global.imageTag | default .Values.payment.image.tag }}"
+          imagePullPolicy: {{ .Values.payment.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.payment.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+          resources:
+            {{- toYaml .Values.payment.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.payment.probes.healthPath }}
+              port: {{ .Values.payment.service.targetPort }}
+            initialDelaySeconds: {{ .Values.payment.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.payment.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.payment.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.payment.probes.healthPath }}
+              port: {{ .Values.payment.service.targetPort }}
+            periodSeconds: {{ .Values.payment.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.payment.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.payment.probes.healthPath }}
+              port: {{ .Values.payment.service.targetPort }}
+            periodSeconds: {{ .Values.payment.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.payment.probes.timeoutSeconds }}
+            failureThreshold: 3

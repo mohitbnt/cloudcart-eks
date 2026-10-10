@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudcart-order-service
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: order-service
+    app.kubernetes.io/component: service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: {{ .Values.order.service.type }}
+  ports:
+    - port: {{ .Values.order.service.port }}
+      targetPort: {{ .Values.order.service.targetPort }}
+  selector:
+    {{- include "cloudcart.selectorLabels" "order" | nindent 4 }}

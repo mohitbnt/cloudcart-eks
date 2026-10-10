@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudcart-catalog-deployment
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+    app.kubernetes.io/name: catalog-deployment
+    app.kubernetes.io/component: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{ if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.catalog.replicaCount }}
+  {{ end }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" "catalog" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cloudcart.labels" . | nindent 8 }}
+        {{- include "cloudcart.selectorLabels" "catalog" | nindent 8 }}
+    spec:
+      containers:
+        - name: cloudcart-catalog-container
+          image: "{{ .Values.catalog.image.repository }}:{{ .Values.global.imageTag | default .Values.catalog.image.tag }}"
+          imagePullPolicy: {{ .Values.catalog.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.catalog.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: database_url
+          resources:
+            {{- toYaml .Values.catalog.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.catalog.probes.healthPath }}
+              port: {{ .Values.catalog.service.targetPort }}
+            initialDelaySeconds: {{ .Values.catalog.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.catalog.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.catalog.probes.timeoutSeconds }}
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probes.healthPath }}
+              port: {{ .Values.catalog.service.targetPort }}
+            periodSeconds: {{ .Values.catalog.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.catalog.probes.timeoutSeconds }}
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.catalog.probes.healthPath }}
+              port: {{ .Values.catalog.service.targetPort }}
+            periodSeconds: {{ .Values.catalog.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.catalog.probes.timeoutSeconds }}
+            failureThreshold: 3
