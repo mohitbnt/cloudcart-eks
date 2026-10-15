@@ -1,15 +1,27 @@
-name: Production Infrastructure
+name: Production Data Stores Infrastructure
 
-on: 
+on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform Action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
-permissions: 
+permissions:
   id-token: write
   contents: read
 
 jobs:
   terraform-prod-infra:
+    name: Terraform Prod Data Stores (${{ inputs.action }})
     runs-on: ubuntu-latest
+    environment: prod
+
     steps:
       - name: Assume the AWS role
         uses: aws-actions/configure-aws-credentials@v4
@@ -18,7 +30,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-actions-terraform-prod-infra
           audience: sts.amazonaws.com
-      
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -27,23 +39,25 @@ jobs:
         with:
           terraform_version: 1.15.8
           terraform_wrapper: false
-      
+
       - name: Terraform Format
         id: fmt
         working-directory: ./terraform
         run: terraform fmt -check -recursive
 
-      - name: Terraform generate terraform.tfvars
+      - name: Generate terraform.tfvars
         id: tfvars
         working-directory: ./terraform/environments/prod
         run: |
-          cp terraform.tfvars.example terraform.tfvars
-      
+          if [ -f terraform.tfvars.example ]; then
+            cp terraform.tfvars.example terraform.tfvars
+          fi
+
       - name: Terraform Init
         id: init
         working-directory: ./terraform/environments/prod
         run: terraform init -input=false -backend-config=prod-backend.conf
-      
+
       - name: Terraform Validate
         id: validate
         working-directory: ./terraform/environments/prod
@@ -52,9 +66,14 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ./terraform/environments/prod
-        run: terraform plan -input=false -out=prod-infra.tfplan -var-file=terraform.tfvars
+        run: |
+          if [ "${{ inputs.action }}" = "destroy" ]; then
+            terraform plan -destroy -input=false -out=prod-infra.tfplan -var-file=terraform.tfvars
+          else
+            terraform plan -input=false -out=prod-infra.tfplan -var-file=terraform.tfvars
+          fi
 
-      - name: Terraform Apply
+      - name: Terraform Apply or Destroy
         id: apply
         working-directory: ./terraform/environments/prod
         run: terraform apply -input=false -auto-approve prod-infra.tfplan

@@ -1,0 +1,100 @@
+name: 01 - Initial Core Infrastructure Bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  variables: write  # Allows updating GitHub Repository Variables (EKS_CLUSTER_NAME, VPC_ID)
+
+jobs:
+  infrastructure:
+    name: Terraform Core Infrastructure
+    runs-on: ubuntu-latest
+    outputs:
+      cluster_name: ${{ steps.tf_outputs.outputs.cluster_name }}
+      vpc_id: ${{ steps.tf_outputs.outputs.vpc_id }}
+
+    steps:
+      - name: Assume the AWS role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-actions-terraform-core-infra
+          audience: sts.amazonaws.com
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - name: Terraform Format
+        id: fmt
+        working-directory: ./terraform
+        run: terraform fmt -check -recursive
+
+      - name: Generate terraform.tfvars
+        id: tfvars
+        working-directory: ./terraform/core-infra
+        run: |
+          cp terraform.tfvars.example terraform.tfvars
+
+      - name: Terraform Init
+        id: init
+        working-directory: ./terraform/core-infra
+        run: terraform init -input=false -backend-config=core-infra-backend.conf
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ./terraform/core-infra
+        run: terraform validate -no-color
+
+      - name: Terraform Plan - Bootstrap Core Infrastructure
+        id: plan
+        working-directory: ./terraform/core-infra
+        run: |
+          terraform plan \
+            -input=false \
+            -out=core-infra.tfplan \
+            -var-file=terraform.tfvars \
+            -var="eks_admins=[\"${{ vars.EKS_ADMIN_ARN }}\",\"${{ vars.OIDC_ROLE_ARN }}\"]"
+
+      - name: Terraform Apply - Bootstrap Core Infrastructure
+        id: apply
+        working-directory: ./terraform/core-infra
+        run: terraform apply -input=false -auto-approve core-infra.tfplan
+
+      - name: Get EKS Cluster Outputs
+        id: tf_outputs
+        working-directory: ./terraform/core-infra
+        run: |
+          CLUSTER_NAME=$(terraform output -raw cluster_name)
+          VPC_ID=$(terraform output -raw vpc_id)
+
+          echo "cluster_name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
+          echo "vpc_id=$VPC_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Update GitHub Repository Variables
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CLUSTER_NAME: ${{ steps.tf_outputs.outputs.cluster_name }}
+          VPC_ID: ${{ steps.tf_outputs.outputs.vpc_id }}
+        run: |
+          # Create or update EKS_CLUSTER_NAME variable
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/$REPO/actions/variables/EKS_CLUSTER_NAME" \
+            -f value="$CLUSTER_NAME" || \
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 20
