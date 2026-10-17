@@ -9,10 +9,10 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   configuration_values = jsonencode({
-    enableNetworkPolicy = true
+    enableNetworkPolicy = "true"
     nodeAgent = {
-      enablePolicyEventLogs = true
-      enableCloudWatchLogs  = true
+      enablePolicyEventLogs = "true"
+      enableCloudWatchLogs  = "true"
     }
   })
 
