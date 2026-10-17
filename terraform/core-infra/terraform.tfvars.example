@@ -66,7 +66,7 @@ kubernetes_version = "1.36"
 # IMPORTANT:
 # Replace this example value with the public IP/network that should
 # be allowed to access the EKS API.
-office_ips = []
+office_ips = [223.188.131.162/32]
 
 
 # ============================================================
