@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudcart-dev
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: cloudcart
+  source:
+    repoURL: https://github.com/mohitbnt/cloudcart-eks.git
+    targetRevision: main
+    path: kubernetes/helm-charts/cloudcart
+    helm:
+      releaseName: cloudcart
+      valueFiles:
+        - values.yaml
+        - values-dev.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudcart-dev
+  syncPolicy:
+    automated:          # dev: deploy every commit to main
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-k8s-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: cloudcart
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: k8s-monitoring
+      targetRevision: 4.0.0          # pin; bump deliberately and read the release notes
+      helm:
+        releaseName: grafana-k8s-monitoring
+        valueFiles:
+          - $values/kubernetes/monitoring/k8s-monitoring/values.yaml
+    - repoURL: https://github.com/mohitbnt/cloudcart-eks.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true         # Alloy operator CRDs are too large for client-side apply

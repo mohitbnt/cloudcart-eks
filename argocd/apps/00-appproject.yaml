@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cloudcart
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"   # must exist before the Applications that use it
+spec:
+  description: CloudCart workloads and observability stack
+  sourceRepos:
+    - https://github.com/mohitbnt/cloudcart-eks.git
+    - https://grafana.github.io/helm-charts
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: cloudcart-dev
+    - server: https://kubernetes.default.svc
+      namespace: cloudcart-prod
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+  # The monitoring chart installs ClusterRoles/CRDs (Alloy operator), so cluster-scoped
+  # kinds are allowed. Tighten to an explicit list once the stack is stable.
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"

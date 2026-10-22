@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudcart-prod
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: cloudcart
+  source:
+    repoURL: https://github.com/mohitbnt/cloudcart-eks.git
+    targetRevision: main      # better: a release tag / branch once CI promotes images
+    path: kubernetes/helm-charts/cloudcart
+    helm:
+      releaseName: cloudcart
+      valueFiles:
+        - values.yaml
+        - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudcart-prod
+  # prod: NO automated sync. ArgoCD shows OutOfSync and a human clicks Sync.
+  # Flip to `automated: {prune: false, selfHeal: true}` when you trust the pipeline.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
