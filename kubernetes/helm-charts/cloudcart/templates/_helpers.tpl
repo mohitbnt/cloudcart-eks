@@ -25,3 +25,12 @@ Usage: {{ include "cloudcart.selectorLabels" "cart" }}
 app.kubernetes.io/name: {{ . }}
 app.kubernetes.io/instance: cloudcart-{{ . }}
 {{- end }}
+
+{{/*
+Grafana Alloy annotation-autodiscovery: scrape /metrics on backend pods
+*/}}
+{{- define "cloudcart.metricsAnnotations" -}}
+k8s.grafana.com/scrape: "true"
+k8s.grafana.com/metrics.path: "/metrics"
+k8s.grafana.com/metrics.portNumber: "8000"
+{{- end }}
