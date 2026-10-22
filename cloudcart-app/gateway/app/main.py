@@ -1,6 +1,7 @@
 import os
 
 import httpx
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -26,6 +27,7 @@ ROUTES = {
 PRESERVE_PREFIX = {"cart", "inventory"}
 
 app = FastAPI(title="CloudCart API Gateway", version="1.0.0")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 
 
 def allowed_origins() -> list[str]:

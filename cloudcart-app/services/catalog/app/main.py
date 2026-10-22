@@ -4,9 +4,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 DATABASE_URL=os.getenv("DATABASE_URL")
 engine=create_engine(DATABASE_URL,pool_pre_ping=True)
 class Base(DeclarativeBase): pass
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 app=FastAPI(title="CloudCart Catalog")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 class ProductDB(Base):
  __tablename__="products"
  id:Mapped[int]=mapped_column(primary_key=True)

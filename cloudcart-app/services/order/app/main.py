@@ -1,6 +1,7 @@
 import os
 
 import httpx
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import Float, String, create_engine, select
@@ -46,6 +47,7 @@ class NewOrder(BaseModel):
 
 
 app = FastAPI(title="CloudCart Order", version="1.0.0")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 
 
 @app.on_event("startup")

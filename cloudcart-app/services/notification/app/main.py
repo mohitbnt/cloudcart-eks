@@ -1,5 +1,6 @@
 import os
 
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlalchemy import Integer, String, create_engine, select
@@ -35,6 +36,7 @@ class Notice(BaseModel):
 
 
 app = FastAPI(title="CloudCart Notification", version="1.0.0")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 
 
 @app.on_event("startup")

@@ -3,6 +3,7 @@ import os
 import secrets
 
 import redis
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import String, create_engine, select
@@ -45,6 +46,7 @@ class Credentials(BaseModel):
 
 
 app = FastAPI(title="CloudCart Identity", version="1.0.0")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 
 
 def normalize_email(email: str) -> str:

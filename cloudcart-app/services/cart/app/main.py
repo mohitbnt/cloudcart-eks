@@ -2,6 +2,7 @@ import json
 import os
 
 import redis
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
@@ -19,6 +20,7 @@ COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "cloudcart_session")
 
 r = redis.from_url(REDIS_URL, decode_responses=True)
 app = FastAPI(title="CloudCart Cart", version="1.0.0")
+Instrumentator().instrument(app).expose(app, include_in_schema=False)  # /metrics
 
 
 class Item(BaseModel):
