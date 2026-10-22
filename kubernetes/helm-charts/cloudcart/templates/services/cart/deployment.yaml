@@ -16,6 +16,10 @@ spec:
       {{- include "cloudcart.selectorLabels" "cart" | nindent 6 }}
   template:
     metadata:
+      {{- if .Values.metrics.enabled }}
+      annotations:
+        {{- include "cloudcart.metricsAnnotations" . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "cloudcart.labels" . | nindent 8 }}
         {{- include "cloudcart.selectorLabels" "cart" | nindent 8 }}
