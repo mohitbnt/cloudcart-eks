@@ -1,0 +1,81 @@
+# Grafana Kubernetes Monitoring chart v4.x  ->  Alloy collectors -> Grafana Cloud
+# Sized for 2x t3.medium nodes; collectors are deliberately small.
+cluster:
+  name: cloudcart-eks
+
+# --- Where data goes. Copy the URLs from Grafana Cloud:
+#     Connections > Hosted Prometheus / Hosted Logs (your stack's "remote write" / "push" URLs).
+destinations:
+  grafana-cloud-metrics:
+    type: prometheus
+    url: https://prometheus-prod-REPLACE-prod-REGION.grafana.net/api/prom/push
+    auth:
+      type: basic
+      usernameKey: prom-username
+      passwordKey: token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+  grafana-cloud-logs:
+    type: loki
+    url: https://logs-prod-REPLACE.grafana.net/loki/api/v1/push
+    auth:
+      type: basic
+      usernameKey: loki-username
+      passwordKey: token
+    secret:
+      create: false
+      name: grafana-cloud-credentials
+      namespace: monitoring
+
+# --- Alloy instances
+collectors:
+  metrics-collector:
+    presets: [clustered, statefulset, small]   # scrape work is shared, no duplicate series
+  logs-collector:
+    presets: [filesystem-log-reader, daemonset, small]
+  events-collector:
+    presets: [singleton, small]
+
+# --- Backing exporters (v4: explicit)
+telemetryServices:
+  kube-state-metrics:
+    deploy: true
+  node-exporter:
+    deploy: true
+
+# --- Metrics
+clusterMetrics:
+  enabled: true
+  collector: metrics-collector
+  controlPlane:
+    enabled: false          # EKS control plane is managed by AWS
+hostMetrics:
+  enabled: true
+  collector: metrics-collector
+  linuxHosts:
+    enabled: true
+
+# CloudCart pods opt in via the k8s.grafana.com/scrape annotations added to the Helm chart
+annotationAutodiscovery:
+  enabled: true
+  collector: metrics-collector
+
+# --- Logs
+podLogsViaLoki:
+  enabled: true
+  collector: logs-collector
+  namespaces:
+    - cloudcart-dev
+    - cloudcart-prod
+    - argocd
+    - monitoring
+    - external-secrets
+  labels:
+    app: app.kubernetes.io/name   # Loki label "app" = pod label (gateway, cart, order, ...)
+    env: env                      # dev | production (set by chart helper)
+
+clusterEvents:
+  enabled: true
+  collector: events-collector
