@@ -46,7 +46,24 @@ resource "aws_subnet" "private_subnets" {
 }
 
 # --------------------------------------------------------------------------------
-# 4. Create Internet Gateway
+# 4. Create isolated data subnets (RDS, ElastiCache)
+# --------------------------------------------------------------------------------
+
+resource "aws_subnet" "data_subnets" {
+  count                   = length(var.data_subnet_cidrs)
+  vpc_id                  = aws_vpc.main_vpc.id
+  cidr_block              = var.data_subnet_cidrs[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = false
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-data-subnet-${count.index}"
+    Tier = "data"
+  })
+}
+
+# --------------------------------------------------------------------------------
+# 5. Create Internet Gateway
 # --------------------------------------------------------------------------------
 
 resource "aws_internet_gateway" "main_igw" {
@@ -58,7 +75,7 @@ resource "aws_internet_gateway" "main_igw" {
 }
 
 # --------------------------------------------------------------------------------
-# 5. Create public route table
+# 6. Create public route table
 # --------------------------------------------------------------------------------
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.main_vpc.id
@@ -69,7 +86,7 @@ resource "aws_route_table" "public_route_table" {
 }
 
 # --------------------------------------------------------------------------------
-# 6. Create public route
+# 7. Create public route
 # --------------------------------------------------------------------------------
 
 resource "aws_route" "public_route" {
@@ -79,7 +96,7 @@ resource "aws_route" "public_route" {
 }
 
 # --------------------------------------------------------------------------------
-# 7. Associate public route table with public subnets
+# 8. Associate public route table with public subnets
 # --------------------------------------------------------------------------------
 
 resource "aws_route_table_association" "public_subnet_association" {
@@ -89,7 +106,7 @@ resource "aws_route_table_association" "public_subnet_association" {
 }
 
 # --------------------------------------------------------------------------------
-# 8. Create private route table
+# 9. Create private route table
 # --------------------------------------------------------------------------------
 
 resource "aws_route_table" "private_route_table" {
@@ -101,7 +118,7 @@ resource "aws_route_table" "private_route_table" {
 }
 
 # --------------------------------------------------------------------------------
-# 9. Associate private route table with private subnets
+# 10. Associate private route table with private subnets
 # --------------------------------------------------------------------------------
 
 resource "aws_route_table_association" "private_subnet_association" {
@@ -111,11 +128,29 @@ resource "aws_route_table_association" "private_subnet_association" {
 }
 
 # --------------------------------------------------------------------------------
+# 11. Database route table (local routes only) and associations
+# --------------------------------------------------------------------------------
+
+resource "aws_route_table" "data_route_table" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-data-route-table"
+  })
+}
+
+resource "aws_route_table_association" "data_subnet_association" {
+  count          = length(var.data_subnet_cidrs)
+  subnet_id      = aws_subnet.data_subnets[count.index].id
+  route_table_id = aws_route_table.data_route_table.id
+}
+
+# --------------------------------------------------------------------------------
 # Optional: VPC Endpoints for S3 and other services if NAT gateway is not enabled.
 # --------------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------------
-# 10. Create S3 VPC endpoint
+# 12. Create S3 VPC endpoint
 # --------------------------------------------------------------------------------
 
 resource "aws_vpc_endpoint" "s3_vpc_endpoint" {
@@ -131,7 +166,7 @@ resource "aws_vpc_endpoint" "s3_vpc_endpoint" {
 }
 
 # --------------------------------------------------------------------------------
-# 11. Create Interface VPC endpoint for SSM and other services
+# 13. Create Interface VPC endpoint for SSM and other services
 # --------------------------------------------------------------------------------
 
 resource "aws_vpc_endpoint" "interface_vpc_endpoint" {
@@ -154,7 +189,7 @@ resource "aws_vpc_endpoint" "interface_vpc_endpoint" {
 # --------------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------------
-# 12. Elastic IP for NAT Gateway (Created only if enable_nat_gateway = true)
+# 14. Elastic IP for NAT Gateway (Created only if enable_nat_gateway = true)
 # --------------------------------------------------------------------------------
 
 resource "aws_eip" "nat_gw_eip" {
@@ -167,7 +202,7 @@ resource "aws_eip" "nat_gw_eip" {
 }
 
 # --------------------------------------------------------------------------------
-# 13. NAT Gateway (Created only if enable_nat_gateway = true)
+# 15. NAT Gateway (Created only if enable_nat_gateway = true)
 # --------------------------------------------------------------------------------
 
 resource "aws_nat_gateway" "nat_gw" {
@@ -185,7 +220,7 @@ resource "aws_nat_gateway" "nat_gw" {
 }
 
 # --------------------------------------------------------------------------------
-# 14. Route to NAT Gateway for Private Route Table
+# 16. Route to NAT Gateway for Private Route Table
 # --------------------------------------------------------------------------------
 
 resource "aws_route" "private_nat_gateway" {

@@ -4,7 +4,7 @@
 # --------------------------------------------------------------------------------
 resource "aws_elasticache_subnet_group" "redis_subnet_group" {
   name       = "${var.project_name}-${var.environment}-redis-subnet-group"
-  subnet_ids = var.private_subnet_ids
+  subnet_ids = var.data_subnet_ids
 
   tags = merge(
     var.common_tags,

@@ -56,6 +56,21 @@ variable "private_subnet_cidrs" {
   }
 }
 
+variable "data_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for the isolated data subnets (RDS, ElastiCache). One per AZ, at least two."
+
+  validation {
+    condition     = length(var.data_subnet_cidrs) >= 2
+    error_message = "Provide at least two data_subnet_cidrs (RDS and ElastiCache subnet groups need two AZs)."
+  }
+
+  validation {
+    condition     = alltrue([for cidr in var.data_subnet_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "All data_subnet_cidrs values must be valid IPv4 CIDR blocks."
+  }
+}
+
 variable "enable_nat_gateway" {
   type        = bool
   default     = true

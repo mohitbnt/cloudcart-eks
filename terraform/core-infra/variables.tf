@@ -51,6 +51,16 @@ variable "private_subnet_cidrs" {
   }
 }
 
+variable "data_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for the isolated data subnets (RDS, ElastiCache)."
+
+  validation {
+    condition     = length(var.data_subnet_cidrs) >= 2 && alltrue([for cidr in var.data_subnet_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "Provide at least two valid IPv4 CIDR blocks in data_subnet_cidrs."
+  }
+}
+
 variable "enable_nat_gateway" {
   type        = bool
   default     = true
@@ -111,7 +121,7 @@ variable "disk_size" {
 variable "capacity_type" {
   type        = string
   description = "Capacity type used by the EKS node group."
-  default     = "SPOT"
+  default     = "ON_DEMAND"
 }
 
 variable "eks_admins" {

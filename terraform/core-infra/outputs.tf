@@ -5,6 +5,10 @@ output "private_subnet_ids" {
   value = module.networking.private_subnet_ids
 }
 
+output "data_subnet_ids" {
+  value = module.networking.data_subnet_ids
+}
+
 # --------------------------------------------------------------------------------
 # 2. Publish RDS Security Group ID
 # --------------------------------------------------------------------------------
@@ -31,4 +35,15 @@ output "cluster_name" {
 # --------------------------------------------------------------------------------
 output "vpc_id" {
   value = module.networking.vpc_id
+}
+
+# --------------------------------------------------------------------------------
+# Publish ECR registry URL and repository URLs
+# --------------------------------------------------------------------------------
+output "ecr_registry_url" {
+  value = module.ecr.registry_url
+}
+
+output "ecr_repository_urls" {
+  value = module.ecr.repository_urls
 }

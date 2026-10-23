@@ -36,6 +36,16 @@ private_subnet_cidrs = [
   "10.0.22.0/24"
 ]
 
+# CIDR blocks for isolated data subnets (RDS and ElastiCache).
+# Type: list(string)
+# No internet or NAT route; reachable only from inside the VPC.
+# Provide one CIDR block for each AZ (minimum two).
+# Example: ["10.0.31.0/24", "10.0.32.0/24"]
+data_subnet_cidrs = [
+  "10.0.31.0/24",
+  "10.0.32.0/24"
+]
+
 # Controls if NAT Gateway is provisioned.
 # Type: bool
 # Default: true
@@ -105,8 +115,9 @@ disk_size = 20
 # Type: string
 # Supported values in this project: "ON_DEMAND" or "SPOT".
 #
-# SPOT reduces cost but instances can be interrupted by AWS.
-capacity_type = "SPOT"
+# ON_DEMAND nodes are not interrupted by AWS (recommended for ArgoCD, monitoring and prod).
+# SPOT is cheaper but can be reclaimed at any time.
+capacity_type = "ON_DEMAND"
 
 # IAM principal ARN granted administrative access to the EKS cluster
 eks_admins = []

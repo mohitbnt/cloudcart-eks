@@ -15,7 +15,7 @@ resource "random_password" "db_password" {
 # --------------------------------------------------------------------------------
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "${var.project_name}-${var.environment}-db-subnet-group"
-  subnet_ids = var.private_subnet_ids
+  subnet_ids = var.data_subnet_ids
 
   tags = merge(
     var.common_tags,

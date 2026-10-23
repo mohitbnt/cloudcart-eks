@@ -90,7 +90,7 @@ variable "disk_size" {
 variable "capacity_type" {
   type        = string
   description = "Capacity type used by the EKS node group."
-  default     = "SPOT"
+  default     = "ON_DEMAND"
 }
 
 variable "eks_worker_sg_id" {

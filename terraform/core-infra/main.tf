@@ -12,6 +12,7 @@ module "networking" {
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  data_subnet_cidrs    = var.data_subnet_cidrs
   vpc_endpoint_sg_id   = module.security.vpc_endpoint_sg_id
   enable_nat_gateway   = var.enable_nat_gateway
   enable_vpc_endpoints = var.enable_vpc_endpoints
@@ -76,4 +77,16 @@ module "eks" {
     module.security,
     module.iam
   ]
+}
+
+# --------------------------------------------------------------------------------
+# 5. ECR Module (container image repositories)
+# --------------------------------------------------------------------------------
+
+module "ecr" {
+  source = "../modules/ecr"
+
+  project_name = var.project_name
+  region       = var.region
+  common_tags  = local.common_tags
 }

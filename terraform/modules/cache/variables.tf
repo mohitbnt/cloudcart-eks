@@ -35,9 +35,9 @@ variable "common_tags" {
 # --------------------------------------------------------------------------------
 # 2. Network Configuration
 # --------------------------------------------------------------------------------
-variable "private_subnet_ids" {
+variable "data_subnet_ids" {
   type        = list(string)
-  description = "Private subnet IDs used by the Redis subnet group."
+  description = "Isolated data subnet IDs used by the Redis subnet group."
 }
 
 variable "redis_sg_id" {

@@ -18,3 +18,10 @@ output "public_subnet_ids" {
 output "private_subnet_ids" {
   value = aws_subnet.private_subnets[*].id
 }
+
+# --------------------------------------------------------------------------------
+# 4. Publish Data Subnet IDs
+# --------------------------------------------------------------------------------
+output "data_subnet_ids" {
+  value = aws_subnet.data_subnets[*].id
+}

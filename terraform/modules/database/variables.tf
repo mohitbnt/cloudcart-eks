@@ -35,10 +35,9 @@ variable "common_tags" {
 # --------------------------------------------------------------------------------
 # 2. Network Variables
 # --------------------------------------------------------------------------------
-
-variable "private_subnet_ids" {
+variable "data_subnet_ids" {
   type        = list(string)
-  description = "Private subnet IDs used by the RDS subnet group."
+  description = "Isolated data subnet IDs used by the RDS subnet group."
 }
 
 variable "rds_sg_id" {
