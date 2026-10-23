@@ -1,7 +1,5 @@
 # --------------------------------------------------------------------------------
 # 1. One private ECR repository per service  (<project>/<service>)
-#    Worker nodes already pull from ECR via AmazonEC2ContainerRegistryReadOnly
-#    (see modules/iam/eks-worker-iam.tf).
 # --------------------------------------------------------------------------------
 resource "aws_ecr_repository" "service" {
   for_each = toset(var.repositories)
