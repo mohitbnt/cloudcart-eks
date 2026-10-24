@@ -1,0 +1,140 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+# -----------------------------------------------------------------------------
+# 1. Default deny: every pod in this namespace, ingress and egress
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# -----------------------------------------------------------------------------
+# 2. Allow DNS lookups (CoreDNS in kube-system) for every pod
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+{{- range $svc, $cfg := $np.services }}
+---
+# -----------------------------------------------------------------------------
+# 3. Allow-list for {{ $svc }}
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudcart-{{ $svc }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "cloudcart.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $svc }}
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if or $cfg.fromAlb $cfg.ingressFrom (and $cfg.scrape $np.monitoring.enabled) }}
+  ingress:
+    {{- if $cfg.fromAlb }}
+    # ALB (target-type: ip) sends traffic straight to the pod from the ALB subnets
+    - from:
+        {{- range $np.albCidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - port: {{ $cfg.port }}
+          protocol: TCP
+    {{- end }}
+    {{- if $cfg.ingressFrom }}
+    # Calls from other CloudCart services
+    - from:
+        {{- range $cfg.ingressFrom }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ . }}
+        {{- end }}
+      ports:
+        - port: {{ $cfg.port }}
+          protocol: TCP
+    {{- end }}
+    {{- if and $cfg.scrape $np.monitoring.enabled }}
+    # Grafana Alloy scraping /metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.monitoring.namespace }}
+      ports:
+        - port: {{ $cfg.port }}
+          protocol: TCP
+    {{- end }}
+  {{- else }}
+  ingress: []
+  {{- end }}
+  {{- if or $cfg.egressTo $cfg.postgres $cfg.redis }}
+  egress:
+    {{- if $cfg.egressTo }}
+    - to:
+        {{- range $cfg.egressTo }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ . }}
+        {{- end }}
+      ports:
+        - port: {{ $np.servicePort }}
+          protocol: TCP
+    {{- end }}
+    {{- if $cfg.postgres }}
+    - to:
+        {{- range $np.datastoreCidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- end }}
+    {{- if $cfg.redis }}
+    - to:
+        {{- range $np.datastoreCidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - port: 6379
+          protocol: TCP
+    {{- end }}
+  {{- else }}
+  egress: []
+  {{- end }}
+{{- end }}
+{{- end }}

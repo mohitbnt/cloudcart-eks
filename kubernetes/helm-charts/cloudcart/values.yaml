@@ -1,4 +1,6 @@
 global:
+  # ECR registry (output `ecr_registry_url` of terraform/core-infra). Image = <imageRegistry>/<repository>:<imageTag>
+  imageRegistry: 533317135122.dkr.ecr.us-east-1.amazonaws.com
   imageTag: "1.0.0"
 
 # -----------------------------------------------------------------------------
@@ -12,6 +14,76 @@ externalSecrets:
 # ------------------------------------------------------------------------------
 metrics:
   enabled: true
+
+# ------------------------------------------------------------------------------
+# Network policies (enforced by the VPC CNI network policy agent)
+# Default deny in the namespace + an explicit allow-list per service.
+# ------------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+  servicePort: 8000                  # port used for service-to-service calls
+  # ALB subnets (public subnets in terraform/core-infra). ALB target-type "ip"
+  # delivers traffic to pods from these addresses.
+  albCidrs:
+    - 10.0.1.0/24
+    - 10.0.2.0/24
+  # Isolated database subnets hosting RDS and ElastiCache (database_subnet_cidrs in
+  # terraform/core-infra). Pods live in the private subnets, so these CIDRs match
+  # only the datastores.
+  datastoreCidrs:
+    - 10.0.31.0/24
+    - 10.0.32.0/24
+  monitoring:
+    enabled: true                    # allow Grafana Alloy to scrape /metrics
+    namespace: monitoring
+  # fromAlb: reachable from the load balancer   ingressFrom: pods allowed to call it
+  # egressTo: services it calls   postgres/redis: datastore access   scrape: has /metrics
+  services:
+    frontend:
+      port: 80
+      fromAlb: true
+    gateway:
+      port: 8000
+      fromAlb: true
+      scrape: true
+      egressTo: [catalog, identity, cart, order, inventory, payment, notification]
+    catalog:
+      port: 8000
+      ingressFrom: [gateway]
+      scrape: true
+      postgres: true
+    identity:
+      port: 8000
+      ingressFrom: [gateway]
+      scrape: true
+      postgres: true
+      redis: true
+    cart:
+      port: 8000
+      ingressFrom: [gateway]
+      scrape: true
+      redis: true
+    inventory:
+      port: 8000
+      ingressFrom: [gateway, order]
+      scrape: true
+      postgres: true
+    order:
+      port: 8000
+      ingressFrom: [gateway]
+      scrape: true
+      postgres: true
+      egressTo: [inventory, payment]
+    payment:
+      port: 8000
+      ingressFrom: [gateway, order]
+      scrape: true
+      postgres: true
+    notification:
+      port: 8000
+      ingressFrom: [gateway]
+      scrape: true
+      postgres: true
 
 # ------------------------------------------------------------------------------
 # Autoscaling
@@ -31,7 +103,7 @@ cart:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-cart
+    repository: cloudcart/cart
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -61,7 +133,7 @@ catalog:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-catalog
+    repository: cloudcart/catalog
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -91,7 +163,7 @@ frontend:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-frontend
+    repository: cloudcart/frontend
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -121,7 +193,7 @@ gateway:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-gateway
+    repository: cloudcart/gateway
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -151,7 +223,7 @@ identity:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-identity
+    repository: cloudcart/identity
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -181,7 +253,7 @@ inventory:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-inventory
+    repository: cloudcart/inventory
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -211,7 +283,7 @@ notification:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-notification
+    repository: cloudcart/notification
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -241,7 +313,7 @@ order:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-order
+    repository: cloudcart/order
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -271,7 +343,7 @@ payment:
   replicaCount: 1
 
   image:
-    repository: ghcr.io/mohitbnt/cloudcart-payment
+    repository: cloudcart/payment
     pullPolicy: IfNotPresent
     tag: ""
 
