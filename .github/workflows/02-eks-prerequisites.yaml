@@ -24,10 +24,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      # Single source of truth: read what workflow 01 created from the remote state
+      - name: Read core infrastructure outputs
+        id: core
+        working-directory: ./terraform/core-infra
+        run: |
+          terraform init -input=false -backend-config=core-infra-backend.conf
+          echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "vpc_id=$(terraform output -raw vpc_id)" >> "$GITHUB_OUTPUT"
+
       - name: Configure kubectl for EKS
         run: |
           aws eks update-kubeconfig \
-            --name "${{ vars.EKS_CLUSTER_NAME }}" \
+            --name "${{ steps.core.outputs.cluster_name }}" \
             --region "${{ vars.AWS_REGION }}"
 
       - name: Verify EKS Connectivity
@@ -69,9 +84,9 @@ jobs:
             aws-load-balancer-controller/aws-load-balancer-controller \
             --version 1.16.0 \
             --namespace kube-system \
-            --set clusterName="${{ vars.EKS_CLUSTER_NAME }}" \
+            --set clusterName="${{ steps.core.outputs.cluster_name }}" \
             --set region="${{ vars.AWS_REGION }}" \
-            --set vpcId="${{ vars.VPC_ID }}" \
+            --set vpcId="${{ steps.core.outputs.vpc_id }}" \
             --set enableShield=false \
             --set enableWaf=false \
             --set enableWafv2=false \
