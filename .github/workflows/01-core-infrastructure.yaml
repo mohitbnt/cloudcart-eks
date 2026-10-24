@@ -79,21 +79,22 @@ jobs:
           echo "cluster_name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
           echo "vpc_id=$VPC_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Update GitHub Repository Variables
+      # Why no "gh api .../actions/variables" step any more:
+      #   GITHUB_TOKEN has no permission to create or update repository variables, so
+      #   that call returns 403. Workflow 02 now reads cluster_name and vpc_id directly
+      #   from the Terraform remote state instead, so there is a single source of truth.
+      - name: Publish outputs to the job summary
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
           CLUSTER_NAME: ${{ steps.tf_outputs.outputs.cluster_name }}
           VPC_ID: ${{ steps.tf_outputs.outputs.vpc_id }}
         run: |
-          # Create or update EKS_CLUSTER_NAME variable
-          gh api \
-            --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/$REPO/actions/variables/EKS_CLUSTER_NAME" \
-            -f value="$CLUSTER_NAME" || \
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 20
+          {
+            echo "### Core infrastructure applied"
+            echo ""
+            echo "| Output | Value |"
+            echo "|---|---|"
+            echo "| EKS cluster | \`${CLUSTER_NAME}\` |"
+            echo "| VPC ID | \`${VPC_ID}\` |"
+            echo ""
+            echo "Next: run workflow **02 - EKS Prerequisites**."
+          } >> "$GITHUB_STEP_SUMMARY"
