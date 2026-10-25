@@ -22,23 +22,7 @@ resource "aws_eks_addon" "vpc_cni" {
 }
 
 # --------------------------------------------------------------------------------
-# 2. COREDNS Addon
-# --------------------------------------------------------------------------------
-resource "aws_eks_addon" "coredns" {
-  cluster_name = aws_eks_cluster.main_eks_cluster.name
-  addon_name   = "coredns"
-
-  resolve_conflicts_on_create = "OVERWRITE"
-  resolve_conflicts_on_update = "OVERWRITE"
-
-  depends_on = [
-    aws_eks_cluster.main_eks_cluster,
-    aws_eks_node_group.main_eks_node_group
-  ]
-}
-
-# --------------------------------------------------------------------------------
-# 3. Kube Proxy Addon
+# 2. Kube Proxy Addon
 # --------------------------------------------------------------------------------
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = aws_eks_cluster.main_eks_cluster.name
@@ -48,13 +32,12 @@ resource "aws_eks_addon" "kube_proxy" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [
-    aws_eks_cluster.main_eks_cluster,
-    aws_eks_node_group.main_eks_node_group
+    aws_eks_cluster.main_eks_cluster
   ]
 }
 
 # --------------------------------------------------------------------------------
-# 4. Pod Identity Agent Addon
+# 3. Pod Identity Agent Addon
 # --------------------------------------------------------------------------------
 resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name = aws_eks_cluster.main_eks_cluster.name
@@ -66,6 +49,23 @@ resource "aws_eks_addon" "pod_identity_agent" {
   depends_on = [
     aws_eks_cluster.main_eks_cluster,
     aws_eks_node_group.main_eks_node_group
+  ]
+}
+
+# --------------------------------------------------------------------------------
+# 4. COREDNS Addon
+# --------------------------------------------------------------------------------
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.main_eks_cluster.name
+  addon_name   = "coredns"
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [
+    aws_eks_cluster.main_eks_cluster,
+    aws_eks_node_group.main_eks_node_group,
+    aws_eks_addon.vpc_cni
   ]
 }
 
@@ -108,7 +108,6 @@ resource "aws_eks_pod_identity_association" "eso_pod_identity" {
   role_arn        = var.eso_role_arn
 
   depends_on = [
-    aws_eks_cluster.main_eks_cluster,
     aws_eks_addon.pod_identity_agent
   ]
 }
@@ -121,10 +120,14 @@ resource "aws_eks_pod_identity_association" "lb_controller_pod_identity" {
   namespace       = "kube-system"
   service_account = "aws-load-balancer-controller"
   role_arn        = var.lb_controller_role_arn
+
+  depends_on = [
+    aws_eks_addon.pod_identity_agent
+  ]
 }
 
 # --------------------------------------------------------------------------------
-# 8. Add Metrics Server Addon
+# 8. Add Metrics Server Addon (Requires running nodes and coredns for discovery)
 # --------------------------------------------------------------------------------
 resource "aws_eks_addon" "metrics_server" {
   cluster_name = aws_eks_cluster.main_eks_cluster.name
@@ -135,6 +138,7 @@ resource "aws_eks_addon" "metrics_server" {
 
   depends_on = [
     aws_eks_cluster.main_eks_cluster,
-    aws_eks_node_group.main_eks_node_group
+    aws_eks_node_group.main_eks_node_group,
+    aws_eks_addon.coredns
   ]
 }
