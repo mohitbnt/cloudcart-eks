@@ -19,7 +19,7 @@ jobs:
           role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-actions-k8s-bootstrap
-          audience: sts.amazonaws.com
+          audience: ://amazonaws.com
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +38,25 @@ jobs:
           terraform init -input=false -backend-config=core-infra-backend.conf
           echo "cluster_name=$(terraform output -raw cluster_name)" >> "$GITHUB_OUTPUT"
           echo "vpc_id=$(terraform output -raw vpc_id)" >> "$GITHUB_OUTPUT"
+
+      # --------------------------------------------------------------------------
+      # Dynamically Whitelist Runner IP at EKS Endpoint Layer
+      # --------------------------------------------------------------------------
+      - name: Get Runner IP & Whitelist in EKS Cluster Endpoint
+        id: whitelist
+        run: |
+          RUNNER_IP=$(curl -4 ipconfig.io)
+          echo "RUNNER_IP=${RUNNER_IP}" >> "$GITHUB_ENV"
+          echo "Whitelisting IP: ${RUNNER_IP}/32 on EKS Cluster Endpoint: ${{ steps.core.outputs.cluster_name }}"
+          
+          # Update EKS cluster public access config to include the runner IP alongside any existing CIDRs
+          aws eks update-cluster-config \
+            --name "${{ steps.core.outputs.cluster_name }}" \
+            --resources-vpc-config publicAccessCidrs="${RUNNER_IP}/32"
+          
+          # Wait until EKS Cluster update transitions from UPDATING to ACTIVE
+          echo "Waiting for EKS cluster update to complete..."
+          aws eks wait cluster-active --name "${{ steps.core.outputs.cluster_name }}"
 
       - name: Configure kubectl for EKS
         run: |
