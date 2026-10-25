@@ -1,4 +1,4 @@
-name: Promote to Production
+name: 06 - Promote to Production
 
 on:
   workflow_dispatch:
@@ -26,8 +26,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # the imageTags: header plus the indented lines under it
-          awk '/^imageTags:/{f=1; print; next} f && /^  /{print; next} f{exit}' "$DEV_VALUES_FILE" > "$RUNNER_TEMP/dev-tags.yaml"
+          # prints the imageTags: header plus the indented lines under it
+          tags_block() { awk '/^imageTags:/{f=1; print; next} f && /^  /{print; next} f{exit}' "$1"; }
+
+          tags_block "$DEV_VALUES_FILE" > "$RUNNER_TEMP/dev-tags.yaml"
 
           if ! grep -q '^  ' "$RUNNER_TEMP/dev-tags.yaml"; then
             echo "::error::No imageTags block found in $DEV_VALUES_FILE"; exit 1
@@ -37,14 +39,19 @@ jobs:
             cat "$RUNNER_TEMP/dev-tags.yaml"; exit 1
           fi
 
-          # replace the imageTags: block in prod, leave the rest of the file untouched
-          awk -v blockfile="$RUNNER_TEMP/dev-tags.yaml" '
-            BEGIN { while ((getline line < blockfile) > 0) block = block line "\n" }
-            /^imageTags:/ { printf "%s", block; skip = 1; next }
-            skip && /^  / { next }
-            { skip = 0; print }
-          ' "$PROD_VALUES_FILE" > "$RUNNER_TEMP/values-prod.new"
-          cp "$RUNNER_TEMP/values-prod.new" "$PROD_VALUES_FILE"
+          # Edit ONLY the tag lines in prod's imageTags block, in place. sed leaves every other
+          # byte of the file alone (including a missing newline at the end of the file).
+          sed -n -E 's/^  ([A-Za-z0-9_-]+): (.*)$/\1 \2/p' "$RUNNER_TEMP/dev-tags.yaml" |
+            while read -r svc tag; do
+              sed -i -E "/^imageTags:/,/^[^[:space:]#]/ s|^(  ${svc}: ).*|\1${tag}|" "$PROD_VALUES_FILE"
+            done
+
+          # the two blocks must now be identical, otherwise prod is missing a service key
+          if ! diff <(tags_block "$PROD_VALUES_FILE") "$RUNNER_TEMP/dev-tags.yaml" >/dev/null; then
+            echo "::error::prod imageTags block does not match dev after copying (missing service key?)"
+            diff <(tags_block "$PROD_VALUES_FILE") "$RUNNER_TEMP/dev-tags.yaml" || true
+            exit 1
+          fi
 
           if git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

@@ -1,4 +1,4 @@
-name: Development Data Stores Infrastructure
+name: 03 - Development Data Stores Infrastructure
 
 on:
   workflow_dispatch:

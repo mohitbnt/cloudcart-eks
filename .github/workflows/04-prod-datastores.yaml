@@ -1,4 +1,4 @@
-name: Production Data Stores Infrastructure
+name: 04 - Production Data Stores Infrastructure
 
 on:
   workflow_dispatch:
