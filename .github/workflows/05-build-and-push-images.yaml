@@ -1,0 +1,162 @@
+name: Build and Push Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_all:
+        description: "Build every service (first run / full rebuild)"
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - "cloudcart-app/**"
+
+permissions:
+  contents: read
+
+env:
+  ECR_REPOSITORY_PREFIX: cloudcart # repositories are <prefix>/<service> (terraform/modules/ecr)
+  DEV_VALUES_FILE: kubernetes/helm-charts/cloudcart/values-dev.yaml
+
+jobs:
+  detect-changes:
+    name: Detect changed services
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.filter.outputs.changes }} # e.g. ["cart","order"]
+      has_changes: ${{ steps.result.outputs.has_changes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for the file changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend: ['cloudcart-app/frontend/**']
+            gateway: ['cloudcart-app/gateway/**']
+            cart: ['cloudcart-app/services/cart/**']
+            catalog: ['cloudcart-app/services/catalog/**']
+            identity: ['cloudcart-app/services/identity/**']
+            inventory: ['cloudcart-app/services/inventory/**']
+            notification: ['cloudcart-app/services/notification/**']
+            order: ['cloudcart-app/services/order/**']
+            payment: ['cloudcart-app/services/payment/**']
+
+      - name: Decide whether anything needs building
+        id: result
+        env:
+          CHANGES: ${{ steps.filter.outputs.changes }}
+          BUILD_ALL: ${{ inputs.build_all }}
+        run: |
+          if [[ "$BUILD_ALL" == "true" ]]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "### Building all services (manual full rebuild)" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$CHANGES" != "[]" && -n "$CHANGES" ]]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "### Changed services: \`$CHANGES\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "### No service changes detected, nothing to build" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  build-and-deploy-dev:
+    name: Build, scan, push and deploy to dev
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # AWS OIDC
+      contents: write # commit the new tags back to main
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Assume the AWS role (ECR push)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Prefers the least-privilege role; falls back to the bootstrap role until it exists
+          role-to-assume: ${{ vars.ECR_PUSH_ROLE_ARN || vars.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-actions-ecr-push
+          audience: sts.amazonaws.com
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, scan, push and update values-dev.yaml
+        env:
+          CHANGES: ${{ needs.detect-changes.outputs.changes }}
+          BUILD_ALL: ${{ inputs.build_all }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          set -euo pipefail
+          export TAG="sha-${GITHUB_SHA::7}"
+          UPDATED=()
+
+          build_service() {
+            local service_id=$1 context=$2
+            local repo="${ECR_REPOSITORY_PREFIX}/${service_id}"
+            local image="${REGISTRY}/${repo}:${TAG}"
+
+            echo "==== ${service_id} ===="
+            # ECR tags are immutable: if an earlier run already pushed this tag, reuse it
+            if aws ecr describe-images --repository-name "$repo" --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+              echo "${image} already exists, skipping build"
+            else
+              docker build -t "$image" "$context"
+              docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:0.57.1 image --severity CRITICAL --ignore-unfixed --exit-code 1 "$image"
+              docker push "$image"
+            fi
+
+            # Set this service's tag inside the imageTags: block only
+            sed -i -E "/^imageTags:/,/^[^[:space:]#]/ s|^(  ${service_id}: ).*|\1\"${TAG}\"|" "$DEV_VALUES_FILE"
+            UPDATED+=("$service_id")
+          }
+
+          should_build() { [[ "$BUILD_ALL" == "true" ]] || grep -q "\"$1\"" <<<"$CHANGES"; }
+
+          should_build frontend     && build_service frontend     cloudcart-app/frontend
+          should_build gateway      && build_service gateway      cloudcart-app/gateway
+          should_build cart         && build_service cart         cloudcart-app/services/cart
+          should_build catalog      && build_service catalog      cloudcart-app/services/catalog
+          should_build identity     && build_service identity     cloudcart-app/services/identity
+          should_build inventory    && build_service inventory    cloudcart-app/services/inventory
+          should_build notification && build_service notification cloudcart-app/services/notification
+          should_build order        && build_service order        cloudcart-app/services/order
+          should_build payment      && build_service payment      cloudcart-app/services/payment
+
+          echo "UPDATED_LIST=${UPDATED[*]:-}" >> "$GITHUB_ENV"
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+
+      - name: Commit new tags to main (ArgoCD deploys dev)
+        run: |
+          if [[ -z "${UPDATED_LIST}" ]]; then
+            echo "No service changes detected. Nothing to deploy."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$DEV_VALUES_FILE"
+          if git diff --cached --quiet; then
+            echo "values-dev.yaml already up to date"
+            exit 0
+          fi
+
+          git commit -m "chore(dev): deploy ${UPDATED_LIST// /, } at ${TAG} [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            echo "push failed (attempt ${attempt}), retrying"
+            sleep $((attempt * 3))
+          done
+          exit 1
