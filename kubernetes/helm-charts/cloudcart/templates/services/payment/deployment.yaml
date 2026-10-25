@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: cloudcart-payment-container
-          image: "{{ .Values.payment.image.repository }}:{{ .Values.global.imageTag | default .Values.payment.image.tag }}"
+          image: "{{ $.Values.global.imageRegistry }}/{{ .Values.payment.image.repository }}:{{ .Values.imageTags.payment | default .Values.payment.image.tag }}"
           imagePullPolicy: {{ .Values.payment.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.payment.service.targetPort }}

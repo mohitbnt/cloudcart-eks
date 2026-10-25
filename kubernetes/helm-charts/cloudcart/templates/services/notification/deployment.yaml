@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: cloudcart-notification-container
-          image: "{{ .Values.notification.image.repository }}:{{ .Values.global.imageTag | default .Values.notification.image.tag }}"
+          image: "{{ $.Values.global.imageRegistry }}/{{ .Values.notification.image.repository }}:{{ .Values.imageTags.notification | default .Values.notification.image.tag }}"
           imagePullPolicy: {{ .Values.notification.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.notification.service.targetPort }}

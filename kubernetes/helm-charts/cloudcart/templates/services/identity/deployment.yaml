@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: cloudcart-identity-container
-          image: "{{ .Values.identity.image.repository }}:{{ .Values.global.imageTag | default .Values.identity.image.tag }}"
+          image: "{{ $.Values.global.imageRegistry }}/{{ .Values.identity.image.repository }}:{{ .Values.imageTags.identity | default .Values.identity.image.tag }}"
           imagePullPolicy: {{ .Values.identity.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.identity.service.targetPort }}

@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: cloudcart-inventory-container
-          image: "{{ .Values.inventory.image.repository }}:{{ .Values.global.imageTag | default .Values.inventory.image.tag }}"
+          image: "{{ $.Values.global.imageRegistry }}/{{ .Values.inventory.image.repository }}:{{ .Values.imageTags.inventory | default .Values.inventory.image.tag }}"
           imagePullPolicy: {{ .Values.inventory.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.inventory.service.targetPort }}

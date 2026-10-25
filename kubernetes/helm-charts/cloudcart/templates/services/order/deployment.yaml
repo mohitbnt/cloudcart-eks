@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: cloudcart-order-container
-          image: "{{ .Values.order.image.repository }}:{{ .Values.global.imageTag | default .Values.order.image.tag }}"
+          image: "{{ $.Values.global.imageRegistry }}/{{ .Values.order.image.repository }}:{{ .Values.imageTags.order | default .Values.order.image.tag }}"
           imagePullPolicy: {{ .Values.order.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.order.service.targetPort }}

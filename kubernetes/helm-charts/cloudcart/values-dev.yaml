@@ -1,7 +1,18 @@
 # Development overrides; combine with values.yaml when installing.
 global:
   environment: dev
-  imageTag: "1.0.0"
+
+# Managed by CI - one tag per service (see values.yaml)
+imageTags:
+  frontend: ""
+  gateway: ""
+  cart: ""
+  catalog: ""
+  identity: ""
+  inventory: ""
+  notification: ""
+  order: ""
+  payment: ""
 
 externalSecrets:
   postgresql:

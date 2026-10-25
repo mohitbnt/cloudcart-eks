@@ -1,7 +1,10 @@
 global:
-  # ECR registry (output `ecr_registry_url` of terraform/core-infra). Image = <imageRegistry>/<repository>:<imageTag>
   imageRegistry: 533317135122.dkr.ecr.us-east-1.amazonaws.com
-  imageTag: "1.0.0"
+
+# -----------------------------------------------------------------------------
+# Image tags are set PER SERVICE
+# -----------------------------------------------------------------------------
+imageTags: {}
 
 # -----------------------------------------------------------------------------
 # External Secrets Store
@@ -27,7 +30,7 @@ networkPolicy:
   albCidrs:
     - 10.0.1.0/24
     - 10.0.2.0/24
-  # Isolated database subnets hosting RDS and ElastiCache (database_subnet_cidrs in
+  # Isolated data subnets hosting RDS and ElastiCache (data_subnet_cidrs in
   # terraform/core-infra). Pods live in the private subnets, so these CIDRs match
   # only the datastores.
   datastoreCidrs:
