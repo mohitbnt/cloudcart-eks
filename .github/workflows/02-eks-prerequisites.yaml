@@ -7,12 +7,23 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: eks-prerequisites # two runs must not fight over the cluster's endpoint config
+  cancel-in-progress: false
+
 jobs:
-  kubernetes-bootstrap:
+  bootstrap-cluster:
     name: Cluster Addons Bootstrap
     runs-on: ubuntu-latest
+    outputs:
+      cluster_name: ${{ steps.core.outputs.cluster_name }}
+      access_changed: ${{ steps.access.outputs.access_changed }}
+      original_cidrs: ${{ steps.access.outputs.original_cidrs }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Assume the AWS role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -20,9 +31,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-actions-k8s-bootstrap
           audience: sts.amazonaws.com
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -40,23 +48,52 @@ jobs:
           echo "vpc_id=$(terraform output -raw vpc_id)" >> "$GITHUB_OUTPUT"
 
       # --------------------------------------------------------------------------
-      # Dynamically Whitelist Runner IP at EKS Endpoint Layer
+      # Temporarily allow this runner on the EKS public API endpoint
       # --------------------------------------------------------------------------
-      - name: Get Runner IP & Whitelist in EKS Cluster Endpoint
-        id: whitelist
+      - name: Allow runner IP on the EKS endpoint
+        id: access
+        env:
+          CLUSTER_NAME: ${{ steps.core.outputs.cluster_name }}
         run: |
-          RUNNER_IP=$(curl -4 ipconfig.io)
-          echo "RUNNER_IP=${RUNNER_IP}" >> "$GITHUB_ENV"
-          echo "Whitelisting IP: ${RUNNER_IP}/32 on EKS Cluster Endpoint: ${{ steps.core.outputs.cluster_name }}"
-          
-          # Update EKS cluster public access config to include the runner IP alongside any existing CIDRs
-          aws eks update-cluster-config \
-            --name "${{ steps.core.outputs.cluster_name }}" \
-            --resources-vpc-config publicAccessCidrs="${RUNNER_IP}/32"
-          
-          # Wait until EKS Cluster update transitions from UPDATING to ACTIVE
-          echo "Waiting for EKS cluster update to complete..."
-          aws eks wait cluster-active --name "${{ steps.core.outputs.cluster_name }}"
+          set -euo pipefail
+
+          RUNNER_IP=$(curl -4 -fsS --max-time 10 https://checkip.amazonaws.com | tr -d '[:space:]')
+          [[ "$RUNNER_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "::error::Could not determine the runner IP (got '$RUNNER_IP')"; exit 1; }
+
+          # current list, comma separated
+          ORIGINAL=$(aws eks describe-cluster --name "$CLUSTER_NAME" \
+            --query 'cluster.resourcesVpcConfig.publicAccessCidrs' --output text | tr '\t' ',')
+          echo "Allowed CIDRs now: ${ORIGINAL}"
+
+          if [[ ",${ORIGINAL}," == *",0.0.0.0/0,"* || ",${ORIGINAL}," == *",${RUNNER_IP}/32,"* ]]; then
+            echo "Runner is already allowed, nothing to change."
+            echo "access_changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Record the original list BEFORE changing anything, so the restore job still runs
+          # even if the update or the wait below fails.
+          {
+            echo "access_changed=true"
+            echo "original_cidrs=${ORIGINAL}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Adding ${RUNNER_IP}/32 to ${CLUSTER_NAME}"
+          UPDATE_ID=$(aws eks update-cluster-config --name "$CLUSTER_NAME" \
+            --resources-vpc-config "publicAccessCidrs=${ORIGINAL},${RUNNER_IP}/32" \
+            --query 'update.id' --output text)
+
+          for i in $(seq 1 60); do
+            STATUS=$(aws eks describe-update --name "$CLUSTER_NAME" --update-id "$UPDATE_ID" \
+              --query 'update.status' --output text)
+            echo "update ${UPDATE_ID}: ${STATUS}"
+            case "$STATUS" in
+              Successful) exit 0 ;;
+              Failed|Cancelled) echo "::error::EKS endpoint update ${STATUS}"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out waiting for the EKS endpoint update"; exit 1
 
       - name: Configure kubectl for EKS
         run: |
@@ -64,8 +101,15 @@ jobs:
             --name "${{ steps.core.outputs.cluster_name }}" \
             --region "${{ vars.AWS_REGION }}"
 
-      - name: Verify EKS Connectivity
-        run: kubectl get nodes
+      # The new CIDR can take a few seconds to take effect, so retry
+      - name: Verify EKS connectivity
+        run: |
+          for i in $(seq 1 12); do
+            kubectl get nodes && exit 0
+            echo "API not reachable yet (attempt ${i}/12), retrying in 10s"
+            sleep 10
+          done
+          echo "::error::Cannot reach the EKS API endpoint"; exit 1
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -131,9 +175,66 @@ jobs:
             --version 7.8.2 \
             --namespace argocd \
             --create-namespace \
-            --set server.extraArgs={--insecure}
+            --set 'server.extraArgs={--insecure}'
 
       - name: Wait for ArgoCD to be ready
         run: |
           kubectl wait --namespace argocd --for=condition=available deployment/argocd-server --timeout=180s
           kubectl wait --namespace argocd --for=condition=available deployment/argocd-repo-server --timeout=180s
+
+  # ----------------------------------------------------------------------------
+  # Always put the endpoint allow-list back, even if job 1 failed or was cancelled.
+  # Separate job = separate runner, so it survives a crashed or cancelled runner.
+  # It only talks to the AWS API, not to the cluster, so its IP does not need access.
+  # ----------------------------------------------------------------------------
+  restore-endpoint-access:
+    name: Restore EKS endpoint access list
+    needs: bootstrap-cluster
+    if: ${{ always() && needs.bootstrap-cluster.outputs.access_changed == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Assume the AWS role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: github-actions-k8s-restore
+          audience: sts.amazonaws.com
+
+      - name: Restore the original allowed CIDRs
+        env:
+          CLUSTER_NAME: ${{ needs.bootstrap-cluster.outputs.cluster_name }}
+          ORIGINAL_CIDRS: ${{ needs.bootstrap-cluster.outputs.original_cidrs }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$ORIGINAL_CIDRS" ]]; then
+            echo "::warning::Original CIDR list is unknown. Re-run workflow 01 (terraform apply) to restore it from code."
+            exit 0
+          fi
+
+          CURRENT=$(aws eks describe-cluster --name "$CLUSTER_NAME" \
+            --query 'cluster.resourcesVpcConfig.publicAccessCidrs' --output text | tr '\t' ',')
+
+          if [[ "$(tr ',' '\n' <<<"$CURRENT" | sort)" == "$(tr ',' '\n' <<<"$ORIGINAL_CIDRS" | sort)" ]]; then
+            echo "Allowed CIDRs already match the original list. Nothing to restore."
+            exit 0
+          fi
+
+          echo "Restoring: ${CURRENT}  ->  ${ORIGINAL_CIDRS}"
+          UPDATE_ID=$(aws eks update-cluster-config --name "$CLUSTER_NAME" \
+            --resources-vpc-config "publicAccessCidrs=${ORIGINAL_CIDRS}" \
+            --query 'update.id' --output text)
+
+          for i in $(seq 1 60); do
+            STATUS=$(aws eks describe-update --name "$CLUSTER_NAME" --update-id "$UPDATE_ID" \
+              --query 'update.status' --output text)
+            echo "update ${UPDATE_ID}: ${STATUS}"
+            case "$STATUS" in
+              Successful) echo "### EKS endpoint access restored to: \`${ORIGINAL_CIDRS}\`" >> "$GITHUB_STEP_SUMMARY"; exit 0 ;;
+              Failed|Cancelled) echo "::error::Restore ${STATUS}. Re-run workflow 01 (terraform apply) to reset it."; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out restoring the endpoint access list"; exit 1
