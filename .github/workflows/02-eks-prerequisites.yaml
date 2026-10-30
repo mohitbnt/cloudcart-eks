@@ -182,10 +182,20 @@ jobs:
           kubectl wait --namespace argocd --for=condition=available deployment/argocd-server --timeout=180s
           kubectl wait --namespace argocd --for=condition=available deployment/argocd-repo-server --timeout=180s
 
+      - name: Next steps
+        run: |
+          {
+            echo "### Cluster bootstrapped"
+            echo ""
+            echo "Next, apply the ArgoCD root application by hand: \`kubectl apply -f argocd/bootstrap/root-app.yaml\`"
+            echo ""
+            echo "ArgoCD UI: \`kubectl -n argocd port-forward svc/argocd-server 8080:80\`, then http://localhost:8080 (user \`admin\`)"
+            echo ""
+            echo "Admin password: \`kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # ----------------------------------------------------------------------------
-  # Always put the endpoint allow-list back, even if job 1 failed or was cancelled.
-  # Separate job = separate runner, so it survives a crashed or cancelled runner.
-  # It only talks to the AWS API, not to the cluster, so its IP does not need access.
+  # Restore the EKS endpoint access list to its original state
   # ----------------------------------------------------------------------------
   restore-endpoint-access:
     name: Restore EKS endpoint access list

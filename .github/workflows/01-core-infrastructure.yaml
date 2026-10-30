@@ -2,6 +2,15 @@ name: 01 - Initial Core Infrastructure Bootstrap
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform Action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 permissions:
   id-token: write
@@ -54,22 +63,31 @@ jobs:
         working-directory: ./terraform/core-infra
         run: terraform validate -no-color
 
-      - name: Terraform Plan - Bootstrap Core Infrastructure
+      - name: Terraform Plan - Core Infrastructure
         id: plan
         working-directory: ./terraform/core-infra
         run: |
-          terraform plan \
-            -input=false \
-            -out=core-infra.tfplan \
-            -var-file=terraform.tfvars \
-            -var="eks_admins=[\"${{ vars.EKS_ADMIN_ARN }}\",\"${{ vars.OIDC_ROLE_ARN }}\"]"
+          if [ "${{ inputs.action }}" = "destroy" ]; then
+            terraform plan -destroy \
+              -input=false \
+              -out=core-infra.tfplan \
+              -var-file=terraform.tfvars \
+              -var="eks_admins=[\"${{ vars.EKS_ADMIN_ARN }}\",\"${{ vars.OIDC_ROLE_ARN }}\"]"
+          else
+            terraform plan \
+              -input=false \
+              -out=core-infra.tfplan \
+              -var-file=terraform.tfvars \
+              -var="eks_admins=[\"${{ vars.EKS_ADMIN_ARN }}\",\"${{ vars.OIDC_ROLE_ARN }}\"]"
+          fi
 
-      - name: Terraform Apply - Bootstrap Core Infrastructure
+      - name: Terraform Apply or Destroy - Core Infrastructure
         id: apply
         working-directory: ./terraform/core-infra
         run: terraform apply -input=false -auto-approve core-infra.tfplan
 
       - name: Get EKS Cluster Outputs
+        if: inputs.action == 'apply'
         id: tf_outputs
         working-directory: ./terraform/core-infra
         run: |
@@ -79,11 +97,8 @@ jobs:
           echo "cluster_name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
           echo "vpc_id=$VPC_ID" >> "$GITHUB_OUTPUT"
 
-      # Why no "gh api .../actions/variables" step any more:
-      #   GITHUB_TOKEN has no permission to create or update repository variables, so
-      #   that call returns 403. Workflow 02 now reads cluster_name and vpc_id directly
-      #   from the Terraform remote state instead, so there is a single source of truth.
       - name: Publish outputs to the job summary
+        if: inputs.action == 'apply'
         env:
           CLUSTER_NAME: ${{ steps.tf_outputs.outputs.cluster_name }}
           VPC_ID: ${{ steps.tf_outputs.outputs.vpc_id }}
@@ -97,4 +112,13 @@ jobs:
             echo "| VPC ID | \`${VPC_ID}\` |"
             echo ""
             echo "Next: run workflow **02 - EKS Prerequisites**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Destroy summary
+        if: inputs.action == 'destroy'
+        run: |
+          {
+            echo "### Core infrastructure destroyed"
+            echo ""
+            echo "Remember the data stores (workflows 03 and 04) must be destroyed first."
           } >> "$GITHUB_STEP_SUMMARY"
