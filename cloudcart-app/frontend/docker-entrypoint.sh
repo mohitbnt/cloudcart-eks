@@ -3,8 +3,8 @@ set -eu
 
 : "${API_BASE:=/api}"
 
-cat > /usr/share/nginx/html/config.js <<EOF
+cat > /tmp/config.js <<EOF2
 window.CLOUDCART_API_BASE = "${API_BASE}";
-EOF
+EOF2
 
 exec nginx -g "daemon off;"
