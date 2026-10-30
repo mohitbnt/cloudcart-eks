@@ -88,3 +88,11 @@ variable "vpc_endpoint_sg_id" {
   type        = string
   description = "Security group ID used by the VPC interface endpoints."
 }
+
+# --------------------------------------------------------------------------------
+# 3. IAM Role Configuration
+# --------------------------------------------------------------------------------
+variable "vpc_flow_logs_role_arn" {
+  type        = string
+  description = "ARN of the VPC Flow Logs role."
+}

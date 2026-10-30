@@ -16,6 +16,7 @@ module "networking" {
   vpc_endpoint_sg_id   = module.security.vpc_endpoint_sg_id
   enable_nat_gateway   = var.enable_nat_gateway
   enable_vpc_endpoints = var.enable_vpc_endpoints
+  vpc_flow_logs_role_arn = module.iam.vpc_flow_logs_role_arn
 }
 
 # --------------------------------------------------------------------------------

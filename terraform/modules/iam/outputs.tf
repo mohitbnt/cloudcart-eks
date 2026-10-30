@@ -37,3 +37,11 @@ output "lb_controller_role_arn" {
   value       = aws_iam_role.lb_controller_role.arn
   description = "ARN of the AWS Load Balancer Controller role."
 }
+
+# --------------------------------------------------------------------------------
+# 6. Publish VPC Flow Logs Role ARN
+# --------------------------------------------------------------------------------
+output "vpc_flow_logs_role_arn" {
+  value       = aws_iam_role.vpc_flow_logs_role.arn
+  description = "ARN of the VPC Flow Logs role."
+}

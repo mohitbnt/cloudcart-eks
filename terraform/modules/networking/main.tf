@@ -10,6 +10,35 @@ resource "aws_vpc" "main_vpc" {
     Name = "${var.project_name}-vpc"
   })
 }
+
+# --------------------------------------------------------------------------------
+# Create CloudWatch Log Group for VPC Flow Logs
+# --------------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/${var.project_name}-vpc-flow-logs"
+  retention_in_days = 30
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-vpc-flow-logs"
+  })
+}
+
+# --------------------------------------------------------------------------------
+# Enable VPC Flow Logs
+# --------------------------------------------------------------------------------
+resource "aws_flow_log" "vpc_flow_logs" {
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.main_vpc.id
+  iam_role_arn         = var.vpc_flow_logs_role_arn
+  depends_on = [
+    aws_cloudwatch_log_group.vpc_flow_logs
+  ]
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-vpc-flow-logs"
+  })
+}
+
 # --------------------------------------------------------------------------------
 # 2. Create public subnets
 # --------------------------------------------------------------------------------
@@ -19,7 +48,7 @@ resource "aws_subnet" "public_subnets" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = merge(var.common_tags, {
     Name                                                    = "${var.project_name}-public-subnet-${count.index}"
