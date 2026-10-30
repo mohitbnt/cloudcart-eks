@@ -6,6 +6,7 @@ terraform {
       version = "~> 6.0"
     }
   }
+  required_version = ">= 1.5.0"
   backend "s3" {
     # Use the dev-backend.conf file to configure the backend
   }
