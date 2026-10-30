@@ -25,6 +25,13 @@ spec:
         {{- include "cloudcart.selectorLabels" "inventory" | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      topologySpreadConstraints:
+        {{- include "cloudcart.topologySpread" "inventory" | nindent 8 }}
       containers:
         - name: cloudcart-inventory-container
           image: "{{ $.Values.global.imageRegistry }}/{{ .Values.inventory.image.repository }}:{{ .Values.imageTags.inventory | default .Values.inventory.image.tag }}"
@@ -40,6 +47,11 @@ spec:
                   key: database_url
           resources:
             {{- toYaml .Values.inventory.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           startupProbe:
             httpGet:
               path: {{ .Values.inventory.probes.healthPath }}
@@ -62,3 +74,7 @@ spec:
             periodSeconds: {{ .Values.inventory.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.inventory.probes.timeoutSeconds }}
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

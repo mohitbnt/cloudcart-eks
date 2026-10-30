@@ -7,6 +7,37 @@ global:
 imageTags: {}
 
 # -----------------------------------------------------------------------------
+# Pod hardening (applied to every Deployment)
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: cloudcart # shared by all pods; the API token is NOT mounted
+
+# Backends run as `appuser` (UID 1000 in the python:3.12-slim images). The UID must be numeric
+# here because Kubernetes cannot verify runAsNonRoot for a user given only by name.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true # writable scratch space is the /tmp emptyDir only
+  capabilities:
+    drop: ["ALL"]
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# Per-namespace resource cap (enabled in values-dev.yaml)
+resourceQuota:
+  enabled: false
+  hard: {}
+
+# -----------------------------------------------------------------------------
 # External Secrets Store
 # -----------------------------------------------------------------------------
 externalSecrets:
@@ -43,7 +74,7 @@ networkPolicy:
   # egressTo: services it calls   postgres/redis: datastore access   scrape: has /metrics
   services:
     frontend:
-      port: 80
+      port: 8080
       fromAlb: true
     gateway:
       port: 8000
@@ -173,8 +204,16 @@ frontend:
   service:
     type: ClusterIP
     port: 80
-    targetPort: 80
-  
+    targetPort: 8080 # nginx-unprivileged listens on 8080 (non-root cannot bind port 80)
+
+  # nginx-unprivileged runs as the `nginx` user, UID 101
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+
   resources:
     requests:
       cpu: 100m

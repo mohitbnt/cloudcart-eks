@@ -24,6 +24,13 @@ spec:
         {{- include "cloudcart.labels" . | nindent 8 }}
         {{- include "cloudcart.selectorLabels" "catalog" | nindent 8 }}
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      topologySpreadConstraints:
+        {{- include "cloudcart.topologySpread" "catalog" | nindent 8 }}
       containers:
         - name: cloudcart-catalog-container
           image: "{{ $.Values.global.imageRegistry }}/{{ .Values.catalog.image.repository }}:{{ .Values.imageTags.catalog | default .Values.catalog.image.tag }}"
@@ -39,6 +46,11 @@ spec:
                   key: database_url
           resources:
             {{- toYaml .Values.catalog.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           startupProbe:
             httpGet:
               path: {{ .Values.catalog.probes.healthPath }}
@@ -61,3 +73,7 @@ spec:
             periodSeconds: {{ .Values.catalog.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.catalog.probes.timeoutSeconds }}
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

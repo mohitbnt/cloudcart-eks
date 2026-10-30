@@ -25,6 +25,13 @@ spec:
         {{- include "cloudcart.selectorLabels" "identity" | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      topologySpreadConstraints:
+        {{- include "cloudcart.topologySpread" "identity" | nindent 8 }}
       containers:
         - name: cloudcart-identity-container
           image: "{{ $.Values.global.imageRegistry }}/{{ .Values.identity.image.repository }}:{{ .Values.imageTags.identity | default .Values.identity.image.tag }}"
@@ -65,6 +72,11 @@ spec:
                   name: cloudcart-configmap
           resources:
             {{- toYaml .Values.identity.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           startupProbe:
             httpGet:
               path: {{ .Values.identity.probes.healthPath }}
@@ -87,3 +99,7 @@ spec:
             periodSeconds: {{ .Values.identity.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.identity.probes.timeoutSeconds }}
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

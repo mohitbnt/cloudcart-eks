@@ -1,0 +1,19 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- range $svc := list "frontend" "gateway" "cart" "catalog" "identity" "inventory" "notification" "order" "payment" }}
+---
+# Limits voluntary disruptions (node drains, upgrades) so a service never loses all replicas at once.
+# maxUnavailable (not minAvailable) so a single-replica service can still be drained.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloudcart-{{ $svc }}-pdb
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "cloudcart.labels" $ | nindent 4 }}
+spec:
+  maxUnavailable: {{ $.Values.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "cloudcart.selectorLabels" $svc | nindent 6 }}
+{{- end }}
+{{- end }}

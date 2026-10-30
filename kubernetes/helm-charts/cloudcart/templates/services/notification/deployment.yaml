@@ -23,6 +23,13 @@ spec:
         {{- include "cloudcart.selectorLabels" "notification" | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      topologySpreadConstraints:
+        {{- include "cloudcart.topologySpread" "notification" | nindent 8 }}
       containers:
         - name: cloudcart-notification-container
           image: "{{ $.Values.global.imageRegistry }}/{{ .Values.notification.image.repository }}:{{ .Values.imageTags.notification | default .Values.notification.image.tag }}"
@@ -38,6 +45,11 @@ spec:
                   key: database_url
           resources:
             {{- toYaml .Values.notification.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           startupProbe:
             httpGet:
               path: {{ .Values.notification.probes.healthPath }}
@@ -60,3 +72,7 @@ spec:
             periodSeconds: {{ .Values.notification.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.notification.probes.timeoutSeconds }}
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

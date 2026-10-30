@@ -25,6 +25,13 @@ spec:
         {{- include "cloudcart.selectorLabels" "gateway" | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      topologySpreadConstraints:
+        {{- include "cloudcart.topologySpread" "gateway" | nindent 8 }}
       containers:
         - name: cloudcart-gateway-container
           image: "{{ $.Values.global.imageRegistry }}/{{ .Values.gateway.image.repository }}:{{ .Values.imageTags.gateway | default .Values.gateway.image.tag }}"
@@ -75,6 +82,11 @@ spec:
                   name: cloudcart-configmap
           resources:
             {{- toYaml .Values.gateway.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           startupProbe:
             httpGet:
               path: {{ .Values.gateway.probes.healthPath }}
@@ -97,3 +109,7 @@ spec:
             periodSeconds: {{ .Values.gateway.probes.periodSeconds }}
             timeoutSeconds: {{ .Values.gateway.probes.timeoutSeconds }}
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

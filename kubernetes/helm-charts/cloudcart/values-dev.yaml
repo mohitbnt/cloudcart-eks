@@ -14,6 +14,17 @@ imageTags:
   order: "sha-0cccff5"
   payment: "sha-0cccff5"
 
+# Dev shares the cluster with prod: cap it so a mistake here cannot starve production.
+# Sized for 9 pods (100m/256Mi requests, 500m/512Mi limits each) plus rolling-update surge.
+resourceQuota:
+  enabled: true
+  hard:
+    pods: "30"
+    requests.cpu: "3"
+    requests.memory: 6Gi
+    limits.cpu: "12"
+    limits.memory: 10Gi
+
 externalSecrets:
   postgresql:
     awsSecretName: cloudcart/dev/db-secrets

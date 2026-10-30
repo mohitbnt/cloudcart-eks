@@ -34,3 +34,22 @@ k8s.grafana.com/scrape: "true"
 k8s.grafana.com/metrics.path: "/metrics"
 k8s.grafana.com/metrics.portNumber: "8000"
 {{- end }}
+
+{{/*
+Spread a service's replicas across nodes and zones (soft: the scheduler tries, never blocks).
+Usage: {{ include "cloudcart.topologySpread" "cart" | nindent 8 }}
+*/}}
+{{- define "cloudcart.topologySpread" -}}
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ . }}
+- maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: ScheduleAnyway
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ . }}
+{{- end }}

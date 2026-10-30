@@ -1,0 +1,14 @@
+{{- if .Values.resourceQuota.enabled }}
+# Caps what this namespace can consume. Dev and prod share one cluster, so a runaway dev
+# deployment must not be able to starve production.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cloudcart-quota
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cloudcart.labels" . | nindent 4 }}
+spec:
+  hard:
+    {{- toYaml .Values.resourceQuota.hard | nindent 4 }}
+{{- end }}
