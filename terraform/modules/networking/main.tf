@@ -28,7 +28,7 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
 resource "aws_flow_log" "vpc_flow_logs" {
   log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
   log_destination_type = "cloud-watch-logs"
-  traffic_type         = "ALL"
+  traffic_type         = "REJECT"
   vpc_id               = aws_vpc.main_vpc.id
   iam_role_arn         = var.vpc_flow_logs_role_arn
   depends_on = [
