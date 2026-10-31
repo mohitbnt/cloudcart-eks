@@ -61,5 +61,5 @@ variable "max_image_count" {
 variable "force_delete" {
   type        = bool
   description = "Allow terraform destroy to delete repositories that still contain images."
-  default     = false
+  default     = true
 }
