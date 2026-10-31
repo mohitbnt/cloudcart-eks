@@ -1,0 +1,39 @@
+# Prometheus-format alert rules for Grafana Cloud (Mimir ruler).
+# Load with:
+#   mimirtool rules load --address=<Prometheus URL without /api/prom> --id=<metrics user id> \
+#     --key=<access policy token with rules:write> alert-rules.yaml
+# or recreate the three rules by hand in Grafana: Alerting > Alert rules > New alert rule.
+groups:
+  - name: cloudcart
+    rules:
+      - alert: CloudCartHigh5xxRate
+        expr: |
+          sum by (namespace) (rate(http_requests_total{namespace=~"cloudcart-.*", status="5xx"}[5m]))
+            / clamp_min(sum by (namespace) (rate(http_requests_total{namespace=~"cloudcart-.*"}[5m])), 0.001)
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "More than 5% of requests are failing in {{ $labels.namespace }}"
+          description: "5xx ratio has been above 5% for 5 minutes."
+
+      - alert: CloudCartContainerRestarting
+        expr: increase(kube_pod_container_status_restarts_total{namespace=~"cloudcart-.*"}[15m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.pod }} restarted more than 3 times in 15 minutes"
+          description: "Likely crash-looping. Check: kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} --previous"
+
+      - alert: CloudCartDeploymentUnavailable
+        expr: |
+          kube_deployment_status_replicas_available{namespace=~"cloudcart-.*"}
+            < kube_deployment_spec_replicas{namespace=~"cloudcart-.*"}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.deployment }} has fewer replicas available than desired"
+          description: "Available replicas have been below the desired count for 10 minutes."
