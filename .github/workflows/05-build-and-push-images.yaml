@@ -82,7 +82,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           # Prefers the least-privilege role; falls back to the bootstrap role until it exists
-          role-to-assume: ${{ vars.ECR_PUSH_ROLE_ARN || vars.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ vars.OIDC_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: github-actions-ecr-push
           audience: sts.amazonaws.com
