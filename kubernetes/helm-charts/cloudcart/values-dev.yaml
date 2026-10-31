@@ -4,7 +4,7 @@ global:
 
 # Managed by CI - one tag per service (see values.yaml)
 imageTags:
-  frontend: "sha-0cccff5"
+  frontend: "sha-ce8875c"
   gateway: "sha-0cccff5"
   cart: "sha-0cccff5"
   catalog: "sha-0cccff5"
