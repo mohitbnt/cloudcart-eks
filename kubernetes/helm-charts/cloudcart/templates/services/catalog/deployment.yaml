@@ -43,7 +43,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: postgresql-secret
-                  key: database_url
+                  key: DATABASE_URL
           resources:
             {{- toYaml .Values.catalog.resources | nindent 12 }}
           securityContext:

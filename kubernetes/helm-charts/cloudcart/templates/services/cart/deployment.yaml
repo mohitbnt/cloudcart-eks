@@ -44,7 +44,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: redis-secret
-                  key: redis_url
+                  key: REDIS_URL
           resources:
             {{- toYaml .Values.cart.resources | nindent 12 }}
           securityContext:
