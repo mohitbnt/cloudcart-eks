@@ -8,7 +8,7 @@ cluster:
 destinations:
   grafana-cloud-metrics:
     type: prometheus
-    url: https://prometheus-prod-REPLACE-prod-REGION.grafana.net/api/prom/push
+    url: https://prometheus-prod-43-prod-ap-south-1.grafana.net/api/prom/push
     auth:
       type: basic
       usernameKey: prom-username
@@ -19,7 +19,7 @@ destinations:
       namespace: monitoring
   grafana-cloud-logs:
     type: loki
-    url: https://logs-prod-REPLACE.grafana.net/loki/api/v1/push
+    url: https://logs-prod-028.grafana.net/loki/api/v1/push
     auth:
       type: basic
       usernameKey: loki-username
