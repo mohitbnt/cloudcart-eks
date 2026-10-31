@@ -9,13 +9,13 @@ module "networking" {
   region       = var.region
   common_tags  = local.common_tags
 
-  vpc_cidr             = var.vpc_cidr
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  data_subnet_cidrs    = var.data_subnet_cidrs
-  vpc_endpoint_sg_id   = module.security.vpc_endpoint_sg_id
-  enable_nat_gateway   = var.enable_nat_gateway
-  enable_vpc_endpoints = var.enable_vpc_endpoints
+  vpc_cidr               = var.vpc_cidr
+  public_subnet_cidrs    = var.public_subnet_cidrs
+  private_subnet_cidrs   = var.private_subnet_cidrs
+  data_subnet_cidrs      = var.data_subnet_cidrs
+  vpc_endpoint_sg_id     = module.security.vpc_endpoint_sg_id
+  enable_nat_gateway     = var.enable_nat_gateway
+  enable_vpc_endpoints   = var.enable_vpc_endpoints
   vpc_flow_logs_role_arn = module.iam.vpc_flow_logs_role_arn
 }
 
