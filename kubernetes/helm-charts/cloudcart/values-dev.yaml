@@ -4,15 +4,15 @@ global:
 
 # Managed by CI - one tag per service (see values.yaml)
 imageTags:
-  frontend: "sha-b9f5b22"
-  gateway: "sha-b9f5b22"
-  cart: "sha-b9f5b22"
-  catalog: "sha-b9f5b22"
-  identity: "sha-b9f5b22"
-  inventory: "sha-b9f5b22"
-  notification: "sha-b9f5b22"
-  order: "sha-b9f5b22"
-  payment: "sha-b9f5b22"
+  frontend: "sha-847daab"
+  gateway: "sha-847daab"
+  cart: "sha-847daab"
+  catalog: "sha-847daab"
+  identity: "sha-847daab"
+  inventory: "sha-847daab"
+  notification: "sha-847daab"
+  order: "sha-847daab"
+  payment: "sha-847daab"
 
 # Dev shares the cluster with prod: cap it so a mistake here cannot starve production.
 # Sized for 9 pods (100m/256Mi requests, 500m/512Mi limits each) plus rolling-update surge.
