@@ -442,7 +442,7 @@ ingress:
     alb.ingress.kubernetes.io/healthcheck-path: /health
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
     alb.ingress.kubernetes.io/success-codes: "200"
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:533317135122:certificate/5d4ad4b5-b2d0-4100-9a7b-3171b126278f
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:533317135122:certificate/45ae8cae-e7e7-434e-a6fd-8defe1db1466
   rules:
     - host: shop.cloudsystemonline.com
       paths:
