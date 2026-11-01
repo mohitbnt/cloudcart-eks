@@ -4,15 +4,15 @@ global:
 
 # Managed by CI - one tag per service (see values.yaml)
 imageTags:
-  frontend: "sha-0cccff5"
-  gateway: "sha-0cccff5"
-  cart: "sha-0cccff5"
-  catalog: "sha-0cccff5"
-  identity: "sha-0cccff5"
-  inventory: "sha-0cccff5"
-  notification: "sha-0cccff5"
-  order: "sha-0cccff5"
-  payment: "sha-0cccff5"
+  frontend: "sha-847daab"
+  gateway: "sha-847daab"
+  cart: "sha-847daab"
+  catalog: "sha-847daab"
+  identity: "sha-847daab"
+  inventory: "sha-847daab"
+  notification: "sha-847daab"
+  order: "sha-847daab"
+  payment: "sha-847daab"
 
 externalSecrets:
   postgresql:
