@@ -5,6 +5,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-2"   # must exist before the Applications that use it
+    argocd.argoproj.io/sync-options: Delete=false
 spec:
   description: CloudCart workloads and observability stack
   sourceRepos:
