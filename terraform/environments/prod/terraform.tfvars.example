@@ -70,7 +70,7 @@ db_instance_config = {
   # Prevent accidental deletion of the RDS instance.
   # Type: bool
   # Production: true is recommended.
-  deletion_protection = true
+  deletion_protection = false
 
   # Whether to skip the final snapshot when destroying the RDS instance.
   # Type: bool
