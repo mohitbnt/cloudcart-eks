@@ -20,7 +20,6 @@ jobs:
   terraform-prod-infra:
     name: Terraform Prod Data Stores (${{ inputs.action }})
     runs-on: ubuntu-latest
-    environment: prod
 
     steps:
       - name: Assume the AWS role
