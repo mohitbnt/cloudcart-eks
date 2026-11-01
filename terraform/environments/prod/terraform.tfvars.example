@@ -75,7 +75,7 @@ db_instance_config = {
   # Whether to skip the final snapshot when destroying the RDS instance.
   # Type: bool
   # Production: false ensures a final snapshot is taken before deletion.
-  skip_final_snapshot = false
+  skip_final_snapshot = true
 }
 
 
