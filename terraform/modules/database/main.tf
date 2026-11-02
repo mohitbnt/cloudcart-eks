@@ -63,6 +63,7 @@ resource "aws_db_instance" "db_instance" {
   multi_az                = var.db_instance_config.multi_az
   backup_retention_period = var.db_instance_config.backup_retention
   deletion_protection     = var.db_instance_config.deletion_protection
+  final_snapshot_identifier = "${var.project_name}-${var.environment}-db-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 
   tags = merge(
     var.common_tags,
