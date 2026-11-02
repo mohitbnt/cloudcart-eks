@@ -1,0 +1,105 @@
+title CloudCart on AWS EKS
+colorMode pastel
+styleMode shadow
+typeface clean
+direction right
+
+// ------------------------------------------------------------
+// Outside AWS
+// ------------------------------------------------------------
+Users [icon: users, label: "Users"]
+Cloudflare [icon: cloudflare, label: "Cloudflare DNS"]
+GitHub [icon: github, label: "GitHub repo and Actions"]
+Grafana Cloud [icon: grafana, label: "Grafana Cloud: metrics, logs, alerts"]
+
+// ------------------------------------------------------------
+// AWS account (us-east-1)
+// ------------------------------------------------------------
+AWS Region [icon: aws, color: orange] {
+
+  // Account level services
+  ACM [icon: aws-certificate-manager, label: "ACM wildcard certificate"]
+  ECR [icon: aws-ecr, label: "ECR: 9 repositories, immutable tags"]
+  Secrets Manager [icon: aws-secrets-manager, label: "Secrets Manager"]
+  State Bucket [icon: aws-s3, label: "S3 Terraform state"]
+  OIDC Role [icon: aws-iam, label: "IAM OIDC role for GitHub Actions"]
+  CloudWatch [icon: aws-cloudwatch, label: "CloudWatch: VPC flow logs, EKS logs"]
+
+  VPC [icon: aws-vpc, color: blue, label: "VPC 10.0.0.0/16"] {
+
+    Public Subnets [color: green, label: "Public subnets (2 AZs)"] {
+      Dev ALB [icon: aws-elb, label: "ALB dev"]
+      Prod ALB [icon: aws-elb, label: "ALB prod"]
+      NAT Gateway [icon: aws-nat-gateway, label: "NAT gateway"]
+    }
+
+    Private Subnets [color: purple, label: "Private subnets (2 AZs)"] {
+      EKS Cluster [icon: aws-eks, label: "Amazon EKS"] {
+        Node Group [icon: aws-ec2, label: "Managed node group: 2x t3.medium"]
+
+        Platform Add ons [icon: kubernetes, label: "Platform add-ons"] {
+          ArgoCD [icon: argocd, label: "Argo CD"]
+          External Secrets [icon: kubernetes, label: "External Secrets Operator"]
+          LB Controller [icon: kubernetes, label: "AWS Load Balancer Controller"]
+          Grafana Alloy [icon: grafana, label: "Grafana Alloy"]
+        }
+
+        Dev Namespace [icon: kubernetes, label: "cloudcart-dev"] {
+          Dev Frontend [icon: nginx, label: "frontend"]
+          Dev Gateway [icon: python, label: "gateway"]
+          Dev Services [icon: python, label: "7 backend services"]
+        }
+
+        Prod Namespace [icon: kubernetes, label: "cloudcart-prod (HPA 2 to 10)"] {
+          Prod Frontend [icon: nginx, label: "frontend"]
+          Prod Gateway [icon: python, label: "gateway"]
+          Prod Services [icon: python, label: "7 backend services"]
+        }
+      }
+    }
+
+    Data Subnets [color: red, label: "Data subnets (no internet route)"] {
+      Dev RDS [icon: aws-rds, label: "RDS PostgreSQL dev"]
+      Dev Redis [icon: aws-elasticache, label: "ElastiCache Redis dev"]
+      Prod RDS [icon: aws-rds, label: "RDS PostgreSQL prod, Multi-AZ"]
+      Prod Redis [icon: aws-elasticache, label: "ElastiCache Redis prod"]
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// Traffic
+// ------------------------------------------------------------
+Users > Cloudflare: HTTPS
+Cloudflare > Dev ALB, Prod ALB
+ACM > Dev ALB, Prod ALB: TLS certificate
+Dev ALB > Dev Frontend, Dev Gateway
+Prod ALB > Prod Frontend, Prod Gateway
+Dev Gateway > Dev Services
+Prod Gateway > Prod Services
+
+// ------------------------------------------------------------
+// Data
+// ------------------------------------------------------------
+Dev Services > Dev RDS: Postgres
+Dev Services > Dev Redis: Redis
+Prod Services > Prod RDS: Postgres
+Prod Services > Prod Redis: Redis
+
+// ------------------------------------------------------------
+// Platform
+// ------------------------------------------------------------
+LB Controller > Dev ALB, Prod ALB: manages
+External Secrets > Secrets Manager: reads secrets
+ECR > Node Group: image pull
+ArgoCD > Dev Namespace, Prod Namespace: syncs Helm chart
+Grafana Alloy > Grafana Cloud: metrics and logs
+VPC > CloudWatch: flow logs
+
+// ------------------------------------------------------------
+// CI/CD
+// ------------------------------------------------------------
+GitHub > ECR: push images
+GitHub > OIDC Role: assumes role
+GitHub > State Bucket: Terraform state
+ArgoCD > GitHub: pulls repo

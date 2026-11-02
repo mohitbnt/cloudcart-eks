@@ -1,0 +1,49 @@
+title CloudCart CI/CD and GitOps flow
+colorMode pastel
+styleMode shadow
+typeface clean
+direction right
+
+Developer [icon: user, label: "Developer"]
+
+GitHub [icon: github, label: "GitHub repository"] {
+  Main Branch [icon: git-branch, label: "main"]
+  Values Dev [icon: file-text, label: "values-dev.yaml: imageTags"]
+  Promotion PR [icon: git-pull-request, label: "Promotion pull request"]
+  Values Prod [icon: file-text, label: "values-prod.yaml: imageTags"]
+}
+
+GitHub Actions [icon: github-actions, label: "GitHub Actions"] {
+  Detect Changes [icon: search, label: "Detect changed services"]
+  Build and Scan [icon: docker, label: "Build image, Trivy scan"]
+  Update Dev Tags [icon: edit, label: "Commit new tags to values-dev"]
+  Promote Workflow [icon: play, label: "06 Promote to Production"]
+}
+
+ECR [icon: aws-ecr, label: "Amazon ECR: sha tags, immutable"]
+
+EKS Cluster [icon: aws-eks, label: "Amazon EKS"] {
+  ArgoCD [icon: argocd, label: "Argo CD"]
+  Dev Namespace [icon: kubernetes, label: "cloudcart-dev: auto sync"]
+  Prod Namespace [icon: kubernetes, label: "cloudcart-prod: manual sync"]
+}
+
+// ---- build and deploy to dev ----
+Developer > Main Branch: git push
+Main Branch > Detect Changes: changes in cloudcart-app
+Detect Changes > Build and Scan: changed services only
+Build and Scan > ECR: push image
+Build and Scan > Update Dev Tags: all builds passed
+Update Dev Tags > Values Dev: commit
+Values Dev > ArgoCD: detected
+ArgoCD > Dev Namespace: auto sync
+
+// ---- promote to production ----
+Developer > Promote Workflow: run manually
+Promote Workflow > Values Dev: reads tags
+Promote Workflow > Promotion PR: opens
+Developer > Promotion PR: review and merge
+Promotion PR > Values Prod: merge
+Values Prod > ArgoCD: shows OutOfSync
+Developer > ArgoCD: clicks Sync
+ArgoCD > Prod Namespace: deploy
